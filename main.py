@@ -1,36 +1,105 @@
-from asyncio import sleep
-from load_spreadsheet import get_google_spreadsheet
-
+from action_complier import ActionCompiler
+from spreadsheet_loader import SpreadsheetLoader
 from action import RobotAction
 import time
+import threading
+import logging
+from typing import Dict
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Constants
+# ACTION_SEQUENCE_SPREADSHEET_ID = "1JmjO4Yidu2pLtJxEuu4mYPX14AYmEj0przne75JBg6Y"
+ACTION_SEQUENCE_SPREADSHEET_ID = "17DqsmqCkoggsNeH2iFZmZ696U30Nz7OmWw8KzJj1B6k"
+
+ACTION_DETAILS_SPREADSHEET_ID ="1Bsgc60s3m_-dxhneTedxFlCCYxEp-9Ippu3Yr8dekxo"
+
+ROBOT_IPS = {
+    1: "http://192.168.137.7:9030",
+    2: "http://192.168.137.2:9030",
+    3: "http://192.168.137.3:9030",
+    4: "http://192.168.137.4:9030",
+    5: "http://192.168.137.5:9030",
+    6: "http://192.168.137.6:9030"
+}
+
+
+def initialize_robots() -> Dict[int, RobotAction]:
+    """Initialize all robot connections and return them as a dictionary."""
+    robots = {}
+    for robot_id, ip_address in ROBOT_IPS.items():
+        try:
+            robots[robot_id] = RobotAction(ip_address)
+            logger.info(f"Robot {robot_id} initialized at {ip_address}")
+        except Exception as e:
+            logger.error(f"Failed to initialize Robot {robot_id}: {e}")
+    return robots
+
+
+def execute_robot_actions(robots: Dict[int, RobotAction], row: Dict[str, str]) -> None:
+    """Execute robot actions from a row of spreadsheet data."""
+    try:
+        time_value = row["Time"]
+        logger.info(f"Executing actions with time value: {time_value}")
+        
+        # Create threads for all robots with actions
+        threads = []
+        for robot_id, robot in robots.items():
+            action_key = f"Robot_{robot_id}"
+            action = row.get(action_key)
+            
+            if action:
+                logger.info(f"Robot {robot_id} will perform: {action}")
+                threads.append(
+                    threading.Thread(target=robot.run_action, args=(action,))
+                )    
+            
+        # Start all threads
+        for thread in threads:
+            thread.start()
+            
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join()
+            
+        # Wait for the specified time before the next action
+        logger.info(f"Waiting for {time_value} seconds")
+        time.sleep(float(time_value))
+        
+    except Exception as e:
+        logger.error(f"Error executing robot actions: {e}")
+
+
+def main() -> None:
+    """Main function to load spreadsheet and coordinate robot actions."""
+    try:
+        # Load the spreadsheet data
+        logger.info(f"Loading spreadsheet with ID: {ACTION_SEQUENCE_SPREADSHEET_ID} and action details ID: {ACTION_DETAILS_SPREADSHEET_ID}")
+        spreadsheet_loader = SpreadsheetLoader(ACTION_SEQUENCE_SPREADSHEET_ID, ACTION_DETAILS_SPREADSHEET_ID)
+  
+
+        action_compiler = ActionCompiler(spreadsheet_loader)  # Initialize ActionCompiler with the loader
+        
+        robot_actions = action_compiler.compile_actions()  # Compile actions from the spreadsheet        
+                   
+        
+        # Initialize all robots
+        robots = initialize_robots()
+        
+        # Process each row of actions
+        for row in robot_actions:
+            execute_robot_actions(robots, row)
+            
+        logger.info("All robot actions completed successfully")
+        
+    except Exception as e:
+        logger.error(f"An error occurred in the main program: {e}")
+
 
 if __name__ == "__main__":
-    result = get_google_spreadsheet("1JmjO4Yidu2pLtJxEuu4mYPX14AYmEj0przne75JBg6Y")
-
-    robot_1 = RobotAction("192.168.1.2")
-    robot_2 = RobotAction("192.168.1.3")
-    robot_3 = RobotAction("192.168.1.4")
-    robot_4 = RobotAction("192.168.1.5")
-    robot_5 = RobotAction("192.168.1.6")
-    robot_6 = RobotAction("192.168.1.7")
-
-    for row in result:
-        print(row)
-        time_value = row["Time"]
-        robot_1_action = row["Robot_1"]
-        robot_2_action = row["Robot_2"]
-        robot_3_action = row["Robot_3"]
-        robot_4_action = row["Robot_4"]
-        robot_5_action = row["Robot_5"]
-        robot_6_action = row["Robot_6"]
-
-        print(f"Time: {time_value}")
-        robot_1.run_action(robot_1_action)
-        robot_2.run_action(robot_2_action)
-        robot_3.run_action(robot_3_action)
-        robot_4.run_action(robot_4_action)
-        robot_5.run_action(robot_5_action)
-        robot_6.run_action(robot_6_action)
-        time.sleep(float(time_value))
-
-    print(result)
+    main()
