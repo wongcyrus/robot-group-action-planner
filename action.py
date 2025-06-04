@@ -16,7 +16,8 @@ class RobotAction:
     def __init__(
         self,
         api_url: str,
-        action_name_to_time: Dict[str, str],
+        action_name_to_time: Dict[str, float],
+        action_name_to_repeat_time: Dict[str, int] = None,
         device_id: str = "1732853986186",
     ):
         """
@@ -25,11 +26,13 @@ class RobotAction:
         Args:
             api_url: The URL of the robot API
             action_name_to_time: Dictionary mapping action names to their execution time
+            action_name_to_repeat_time: Dictionary mapping action names to their repeat time
             device_id: The ID of the robot device
         """
         self.api_url = api_url
         self.device_id = device_id
         self.actions = action_name_to_time
+        self.repeat_actions = action_name_to_repeat_time
         self.logger = logging.getLogger("RobotAction")
 
     def run_action(self, name: str) -> Optional[Dict[str, Any]]:
@@ -58,9 +61,9 @@ class RobotAction:
             sleep_time = self.actions[n]
             result = self._send_request(
                 method="RunAction",
-                params=[n, sleep_time],
-                log_success_msg=f"Action run_action({n}, {sleep_time}) successful.",
-                log_error_msg=f"Error running action run_action({n}, {sleep_time}):",
+                params=[n, self.repeat_actions.get(n, 1)],
+                log_success_msg=f"Action run_action({n}, {self.repeat_actions.get(n, 1)}) successful.",
+                log_error_msg=f"Error running action run_action({n}, {self.repeat_actions.get(n, 1)}):",
             )
             results.append(result)
 

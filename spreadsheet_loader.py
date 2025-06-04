@@ -1,5 +1,6 @@
 import csv
 from io import StringIO
+from typing import Dict
 import requests
 
 
@@ -115,7 +116,7 @@ class SpreadsheetLoader:
     def get_action_details(self):
         return self.action_details_data
 
-    def get_action_name_to_time(self):
+    def get_action_name_to_time(self) -> Dict[str, float]:
         """Get a mapping of action names to their time values as floats."""
         if not self.action_details_data:
             raise ValueError("No action details data loaded.")
@@ -131,6 +132,23 @@ class SpreadsheetLoader:
                     # Log or skip invalid time values
                     continue
         return action_name_to_time
+
+    def get_action_name_to_repeat_time(self) -> Dict[str, int]:
+        """Get a mapping of action names to their repeat time values as integers."""
+        if not self.action_details_data:
+            raise ValueError("No action details data loaded.")
+
+        action_name_to_repeat_time = {}
+        for action in self.action_details_data:
+            name = action.get("Name")
+            repeat_time_val = action.get("Repeat_Time")
+            if name and repeat_time_val:
+                try:
+                    action_name_to_repeat_time[name] = int(repeat_time_val)
+                except (ValueError, TypeError):
+                    # Log or skip invalid time values
+                    continue
+        return action_name_to_repeat_time
 
     def get_robot_actions(self):
         return self.robot_actions_data

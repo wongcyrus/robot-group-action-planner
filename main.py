@@ -28,12 +28,12 @@ ROBOT_IPS = {
 }
 
 
-def initialize_robots(action_name_to_time: Dict) -> Dict[int, RobotAction]:
+def initialize_robots(action_name_to_time: Dict, action_name_to_repeat_time: Dict) -> Dict[int, RobotAction]:
     """Initialize all robot connections and return them as a dictionary."""
     robots = {}
     for robot_id, ip_address in ROBOT_IPS.items():
         try:
-            robots[robot_id] = RobotAction(ip_address, action_name_to_time)
+            robots[robot_id] = RobotAction(ip_address, action_name_to_time, action_name_to_repeat_time)
             logger.info(f"Robot {robot_id} initialized at {ip_address}")
         except Exception as e:
             logger.error(f"Failed to initialize Robot {robot_id}: {e}")
@@ -88,9 +88,11 @@ def main() -> None:
         action_compiler = ActionCompiler(spreadsheet_loader)
         robot_actions = action_compiler.compile_actions()
         action_name_to_time = spreadsheet_loader.get_action_name_to_time()
-        robots = initialize_robots(action_name_to_time)
+        action_name_to_repeat_time = spreadsheet_loader.get_action_name_to_repeat_time()
+        robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
 
         for row in robot_actions:
+            logger.info(f"Processing row: {row}")
             execute_robot_actions(robots, row)
 
         logger.info("All robot actions completed successfully")
