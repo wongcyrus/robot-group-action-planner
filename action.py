@@ -129,8 +129,9 @@ class RobotAction:
                 self.api_url, headers=headers, json=data, timeout=0.5
             )
             response.raise_for_status()
-            self.logger.info("%s Response: %s", log_success_msg, response.json())
-            return response.json()
+            resp_json = response.json()
+            self.logger.info(f"%s Response: %s", log_success_msg, resp_json)
+            return resp_json
         except requests.exceptions.RequestException as e:
-            self.logger.error("%s %s", log_error_msg, e)
+            self.logger.error(f"%s %s", log_error_msg, e)
             return None

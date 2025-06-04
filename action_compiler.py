@@ -24,6 +24,10 @@ class ActionCompiler:
         self.spreadsheet_loader = spreadsheet_loader
         self.logger = logging.getLogger("ActionCompiler")
 
+    def _get_robot_keys(self, action: Dict[str, str]) -> List[str]:
+        """Helper to get all robot keys in an action row."""
+        return [key for key in action if key.startswith("Robot")]
+
     def compile_actions(self) -> List[Dict[str, Any]]:
         """
         Compile and validate robot actions from spreadsheet data.
@@ -38,15 +42,15 @@ class ActionCompiler:
         action_name_to_time = self.spreadsheet_loader.get_action_name_to_time()
 
         for action in robot_actions:
-            action_keys = [key for key in action if key.startswith("Robot")]
-            for key in action_keys:
+            for key in self._get_robot_keys(action):
                 value = action[key]
-                rtemplate = Environment(loader=BaseLoader).from_string(value)
-                new_value = rtemplate.render({})
-                action[key] = new_value  # Update the value in robot_actions
+                # Only render as Jinja2 template if there are template markers and value is not empty
+                if value and ("{{" in value or "}}" in value):
+                    rtemplate = Environment(loader=BaseLoader).from_string(value)
+                    action[key] = rtemplate.render({})
 
         self.logger.info(f"Compiled {len(robot_actions)} action sequences")
-        self.logger.debug(f"Action details loaded: {action_name_to_time}")
+        self.logger.debug(f"Action details loaded: {list(action_name_to_time.keys())}")
 
         self.check_actions_existence(robot_actions, action_name_to_time)
         self.check_actions_time(robot_actions, action_name_to_time)
@@ -67,23 +71,20 @@ class ActionCompiler:
             ValueError: If action times exceed allocated time slot
         """
         for idx, action in enumerate(robot_actions, start=1):
-            time = action.get("Time")
-            action_keys = [key for key in action if key.startswith("Robot")]
-
-            for key in action_keys:
-                if action[key] != "":
-                    actions = [a.strip() for a in action[key].splitlines() if a.strip()]
+            time_val = action.get("Time")
+            for key in self._get_robot_keys(action):
+                value = action[key]
+                if value:
+                    actions = [a.strip() for a in value.splitlines() if a.strip()]
                     total_action_time = 0.0
-
                     for act in actions:
                         act_time = action_name_to_time.get(act, "")
                         if act_time == "":
                             continue  # Existence is checked elsewhere
                         total_action_time += float(act_time)
-
-                    if total_action_time > float(time):
+                    if total_action_time > float(time_val):
                         raise ValueError(
-                            f"Row {idx}: Sum of action times {total_action_time}s for '{key}' exceeds overall time {time}s"
+                            f"Row {idx}: Sum of action times {total_action_time}s for '{key}' exceeds overall time {time_val}s"
                         )
 
     def check_actions_existence(
@@ -100,10 +101,10 @@ class ActionCompiler:
             ValueError: If an action is referenced but not defined in action details
         """
         for idx, action in enumerate(robot_actions, start=1):
-            for key in action:
-                if key.startswith("Robot") and action[key] != "":
-                    actions = [a.strip() for a in action[key].splitlines() if a.strip()]
-
+            for key in self._get_robot_keys(action):
+                value = action[key]
+                if value:
+                    actions = [a.strip() for a in value.splitlines() if a.strip()]
                     for act in actions:
                         if act not in action_name_to_time:
                             raise ValueError(
