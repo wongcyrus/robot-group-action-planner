@@ -85,21 +85,11 @@ def main() -> None:
             ACTION_SEQUENCE_SPREADSHEET_ID, ACTION_DETAILS_SPREADSHEET_ID
         )
 
-        action_compiler = ActionCompiler(
-            spreadsheet_loader
-        )  # Initialize ActionCompiler with the loader
-
-        robot_actions = (
-            action_compiler.compile_actions()
-        )  # Compile actions from the spreadsheet
-
-        action_name_to_time = (
-            spreadsheet_loader.get_action_name_to_time()
-        )  # Load action name to time mapping
-        # Initialize all robots
+        action_compiler = ActionCompiler(spreadsheet_loader)
+        robot_actions = action_compiler.compile_actions()
+        action_name_to_time = spreadsheet_loader.get_action_name_to_time()
         robots = initialize_robots(action_name_to_time)
 
-        # Process each row of actions
         for row in robot_actions:
             execute_robot_actions(robots, row)
 

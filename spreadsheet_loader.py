@@ -116,16 +116,20 @@ class SpreadsheetLoader:
         return self.action_details_data
 
     def get_action_name_to_time(self):
-        """Get a mapping of action names to their time values."""
+        """Get a mapping of action names to their time values as floats."""
         if not self.action_details_data:
             raise ValueError("No action details data loaded.")
 
         action_name_to_time = {}
         for action in self.action_details_data:
             name = action.get("Name")
-            time = action.get("Time")
-            if name and time:
-                action_name_to_time[name] = time
+            time_val = action.get("Time")
+            if name and time_val:
+                try:
+                    action_name_to_time[name] = float(time_val)
+                except (ValueError, TypeError):
+                    # Log or skip invalid time values
+                    continue
         return action_name_to_time
 
     def get_robot_actions(self):
