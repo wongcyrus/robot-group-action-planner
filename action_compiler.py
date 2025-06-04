@@ -1,6 +1,7 @@
 from typing import Dict, List, Any
 from spreadsheet_loader import SpreadsheetLoader
 import logging
+from jinja2 import Environment, BaseLoader
 
 
 class ActionCompiler:
@@ -35,6 +36,14 @@ class ActionCompiler:
         """
         robot_actions = self.spreadsheet_loader.get_robot_actions()
         action_name_to_time = self.spreadsheet_loader.get_action_name_to_time()
+
+        for action in robot_actions:
+            action_keys = [key for key in action if key.startswith("Robot")]
+            for key in action_keys:
+                value = action[key]
+                rtemplate = Environment(loader=BaseLoader).from_string(value)
+                new_value = rtemplate.render({})
+                action[key] = new_value  # Update the value in robot_actions
 
         self.logger.info(f"Compiled {len(robot_actions)} action sequences")
         self.logger.debug(f"Action details loaded: {action_name_to_time}")
