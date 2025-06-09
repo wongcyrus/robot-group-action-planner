@@ -35,7 +35,7 @@ class RobotAction:
         self.repeat_actions = action_name_to_repeat_time
         self.logger = logging.getLogger("RobotAction")
 
-    def run_action(self, name: str) -> Optional[Dict[str, Any]]:
+    def run_action(self, name: str, stop_event=None) -> Optional[Dict[str, Any]]:
         """
         Run a specific robot action or sequence of actions.
 
@@ -44,6 +44,7 @@ class RobotAction:
 
         Args:
             name: The name of the action(s) to run, can be multi-line
+            stop_event: Optional threading.Event to allow interruption
 
         Returns:
             Optional response data from the last API call
@@ -53,6 +54,9 @@ class RobotAction:
         results = []
 
         for n in names:
+            if stop_event is not None and stop_event.is_set():
+                self.logger.info("Action interrupted by stop_event.")
+                break
             self.logger.info(f"Running action: {n}")
             if n not in self.actions:
                 self.logger.error(f"Action '{n}' not found in actions dictionary.")
@@ -69,7 +73,16 @@ class RobotAction:
 
             # If executing multiple actions, wait for the specified time between them
             if len(names) > 1:
-                time.sleep(float(sleep_time))
+                waited = 0.0
+                interval = 0.1
+                while waited < float(sleep_time):
+                    if stop_event is not None and stop_event.is_set():
+                        self.logger.info(
+                            "Action interrupted by stop_event during sleep."
+                        )
+                        break
+                    time.sleep(interval)
+                    waited += interval
 
         return results[-1] if results else None
 
@@ -133,8 +146,8 @@ class RobotAction:
             )
             response.raise_for_status()
             resp_json = response.json()
-            self.logger.info(f"%s Response: %s", log_success_msg, resp_json)
+            self.logger.info("%s Response: %s", log_success_msg, resp_json)
             return resp_json
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"%s %s", log_error_msg, e)
+            self.logger.error("%s %s", log_error_msg, e)
             return None
