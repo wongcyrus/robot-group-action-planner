@@ -1,7 +1,9 @@
-from typing import Dict, List, Any
-from spreadsheet_loader import SpreadsheetLoader
 import logging
-from jinja2 import Environment, BaseLoader
+from typing import Any, Dict, List
+
+from jinja2 import BaseLoader, Environment
+
+from spreadsheet_loader import SpreadsheetLoader
 
 
 class ActionCompiler:

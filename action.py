@@ -1,7 +1,8 @@
-from typing import Any, Dict, Optional
 import logging
-import requests
 import time
+from typing import Any, Dict, Optional
+
+import requests
 
 
 class RobotAction:
