@@ -5,6 +5,8 @@ import time
 import threading
 import logging
 from typing import Dict
+import os
+from song_player import play_song
 
 # Configure logging
 logging.basicConfig(
@@ -28,19 +30,25 @@ ROBOT_IPS = {
 }
 
 
-def initialize_robots(action_name_to_time: Dict, action_name_to_repeat_time: Dict) -> Dict[int, RobotAction]:
+def initialize_robots(
+    action_name_to_time: Dict, action_name_to_repeat_time: Dict
+) -> Dict[int, RobotAction]:
     """Initialize all robot connections and return them as a dictionary."""
     robots = {}
     for robot_id, ip_address in ROBOT_IPS.items():
         try:
-            robots[robot_id] = RobotAction(ip_address, action_name_to_time, action_name_to_repeat_time)
+            robots[robot_id] = RobotAction(
+                ip_address, action_name_to_time, action_name_to_repeat_time
+            )
             logger.info(f"Robot {robot_id} initialized at {ip_address}")
-        except Exception as e:
+        except (ConnectionError, OSError, ValueError) as e:
             logger.error(f"Failed to initialize Robot {robot_id}: {e}")
     return robots
 
 
-def execute_robot_actions(robots: Dict[int, RobotAction], row: Dict[str, str]) -> None:
+def execute_robot_actions(
+    robots: Dict[int, RobotAction], row: Dict[str, str], stop_event: threading.Event
+) -> None:
     """Execute robot actions from a row of spreadsheet data."""
     try:
         time_value = row["Time"]
@@ -54,9 +62,8 @@ def execute_robot_actions(robots: Dict[int, RobotAction], row: Dict[str, str]) -
 
             if action:
                 logger.info(f"Robot {robot_id} will perform: {action}")
-                threads.append(
-                    threading.Thread(target=robot.run_action, args=(action,))
-                )
+                t = threading.Thread(target=robot.run_action, args=(action, stop_event))
+                threads.append(t)
 
         # Start all threads
         for thread in threads:
@@ -64,41 +71,91 @@ def execute_robot_actions(robots: Dict[int, RobotAction], row: Dict[str, str]) -
 
         # Wait for all threads to complete
         for thread in threads:
-            thread.join()
+            while thread.is_alive():
+                thread.join(timeout=0.1)
+                if stop_event.is_set():
+                    logger.info("Stop event set, breaking join loop.")
+                    break
 
-        # Wait for the specified time before the next action
+        # Wait for the specified time before the next action, but check for stop_event
         logger.info(f"Waiting for {time_value} seconds")
-        time.sleep(float(time_value))
+        waited = 0.0
+        interval = 0.1
+        while waited < float(time_value):
+            if stop_event.is_set():
+                logger.info("Stop event set during wait, breaking sleep loop.")
+                break
+            time.sleep(interval)
+            waited += interval
 
-    except Exception as e:
+    except (KeyError, ValueError, TypeError) as e:
         logger.error(f"Error executing robot actions: {e}")
+    except KeyboardInterrupt:
+        logger.info("Execution interrupted by user (Ctrl+C)")
+        stop_event.set()
+        raise
 
 
 def main() -> None:
     """Main function to load spreadsheet and coordinate robot actions."""
+
+    song_folder = os.path.join(os.path.dirname(__file__), "song")
+    stop_event = threading.Event()
     try:
         # Load the spreadsheet data
-        logger.info(
-            f"Loading spreadsheet with ID: {ACTION_SEQUENCE_SPREADSHEET_ID} and action details ID: {ACTION_DETAILS_SPREADSHEET_ID}"
-        )
-        spreadsheet_loader = SpreadsheetLoader(
-            ACTION_SEQUENCE_SPREADSHEET_ID, ACTION_DETAILS_SPREADSHEET_ID
-        )
 
-        action_compiler = ActionCompiler(spreadsheet_loader)
-        robot_actions = action_compiler.compile_actions()
-        action_name_to_time = spreadsheet_loader.get_action_name_to_time()
-        action_name_to_repeat_time = spreadsheet_loader.get_action_name_to_repeat_time()
-        robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
+        song_files = [f for f in os.listdir(song_folder) if f.lower().endswith(".mp4")]
+        if not song_files:
+            logger.error(f"No .mp4 files found in {song_folder}")
+            return
 
-        for row in robot_actions:
-            logger.info(f"Processing row: {row}")
-            execute_robot_actions(robots, row)
+        for song_file in song_files:
+            if stop_event.is_set():
+                logger.info(
+                    "Stop event detected before playing next song. Exiting loop."
+                )
+                break
 
-        logger.info("All robot actions completed successfully")
+            song = os.path.splitext(song_file)[0]
+            song_file_path = os.path.join(song_folder, song_file)
 
-    except Exception as e:
+            logger.info(
+                f"Loading spreadsheet with ID: {ACTION_SEQUENCE_SPREADSHEET_ID} and action details ID: {ACTION_DETAILS_SPREADSHEET_ID}"
+            )
+            logger.info(f"Current song: {song_file_path}")
+
+            spreadsheet_loader = SpreadsheetLoader(
+                ACTION_SEQUENCE_SPREADSHEET_ID, ACTION_DETAILS_SPREADSHEET_ID, song
+            )
+
+            action_compiler = ActionCompiler(spreadsheet_loader)
+            robot_actions = action_compiler.compile_actions()
+            action_name_to_time = spreadsheet_loader.get_action_name_to_time()
+            action_name_to_repeat_time = (
+                spreadsheet_loader.get_action_name_to_repeat_time()
+            )
+            robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
+
+            # Play the song before starting robot actions
+            play_song(song_file_path)
+            for row in robot_actions:
+                logger.info(f"Processing row: {row}")
+                try:
+                    execute_robot_actions(robots, row, stop_event)
+                    if stop_event.is_set():
+                        logger.info("Stop event detected in main loop. Exiting...")
+                        return
+                except KeyboardInterrupt:
+                    logger.info("Main loop interrupted by user (Ctrl+C). Exiting...")
+                    stop_event.set()
+                    return
+
+    except (KeyError, ValueError, TypeError) as e:
         logger.error(f"An error occurred in the main program: {e}")
+    except KeyboardInterrupt:
+        logger.info("Program interrupted by user (Ctrl+C). Exiting...")
+        stop_event.set()
+        return
 
 
 if __name__ == "__main__":

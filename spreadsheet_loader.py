@@ -8,7 +8,10 @@ class SpreadsheetLoader:
     """Class for loading and parsing Google Spreadsheet data."""
 
     def __init__(
-        self, robot_actions_spreadsheet_id=None, action_details_spreadsheet_id=None
+        self,
+        robot_actions_spreadsheet_id=None,
+        action_details_spreadsheet_id=None,
+        dance=None,
     ):
         """Initialize the SpreadsheetLoader.
 
@@ -22,6 +25,7 @@ class SpreadsheetLoader:
         # Pre-load data if spreadsheet IDs are provided
         self.robot_actions_data = None
         self.action_details_data = None
+        self.dance = dance
 
         if self.robot_actions_spreadsheet_id:
             self.robot_actions_data = self._load_robot_actions()
@@ -29,7 +33,9 @@ class SpreadsheetLoader:
         if self.action_details_spreadsheet_id:
             self.action_details_data = self._load_action_details()
 
-    def _fetch_spreadsheet_data(self, spreadsheet_id):
+    def _fetch_spreadsheet_data(
+        self, spreadsheet_id: str, sheet_name: str = None
+    ) -> StringIO:
         """Fetch raw data from Google Spreadsheet.
 
         Args:
@@ -38,9 +44,11 @@ class SpreadsheetLoader:
         Returns:
             StringIO or None: CSV data as StringIO object or None if request failed.
         """
-        url = (
-            f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv"
-        )
+        if sheet_name is None:
+            url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv"
+        else:
+            url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&sheet={sheet_name}"
+
         try:
             response = requests.get(url, timeout=10)
             if response.status_code == 200:
@@ -56,7 +64,7 @@ class SpreadsheetLoader:
         Returns:
             list or None: List of dictionaries containing robot actions or None if failed.
         """
-        f = self._fetch_spreadsheet_data(self.robot_actions_spreadsheet_id)
+        f = self._fetch_spreadsheet_data(self.robot_actions_spreadsheet_id, self.dance)
         if not f:
             raise ValueError("Failed to fetch action details spreadsheet data.")
 
