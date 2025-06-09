@@ -1,12 +1,13 @@
-from action_compiler import ActionCompiler
-from spreadsheet_loader import SpreadsheetLoader
-from action import RobotAction
-import time
-import threading
 import logging
-from typing import Dict
 import os
+import threading
+import time
+from typing import Dict
+
+from action import RobotAction
+from action_compiler import ActionCompiler
 from song_player import play_song
+from spreadsheet_loader import SpreadsheetLoader
 
 # Configure logging
 logging.basicConfig(
