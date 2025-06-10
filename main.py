@@ -6,7 +6,7 @@ from typing import Dict
 
 from action import RobotAction
 from action_compiler import ActionCompiler
-from song_player import play_song
+from song_player import play_song, stop_song
 from spreadsheet_loader import SpreadsheetLoader
 
 # Configure logging
@@ -16,10 +16,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Constants
-# ACTION_SEQUENCE_SPREADSHEET_ID = "1JmjO4Yidu2pLtJxEuu4mYPX14AYmEj0przne75JBg6Y"
-ACTION_SEQUENCE_SPREADSHEET_ID = "17DqsmqCkoggsNeH2iFZmZ696U30Nz7OmWw8KzJj1B6k"
-
-ACTION_DETAILS_SPREADSHEET_ID = "1Bsgc60s3m_-dxhneTedxFlCCYxEp-9Ippu3Yr8dekxo"
+action_sequence_spreadsheet_id = "1JmjO4Yidu2pLtJxEuu4mYPX14AYmEj0przne75JBg6Y"
+action_details_spreadsheet_id = "1Bsgc60s3m_-dxhneTedxFlCCYxEp-9Ippu3Yr8dekxo"
 
 ROBOT_IPS = {
     1: "http://192.168.137.7:9030",
@@ -97,15 +95,45 @@ def execute_robot_actions(
         raise
 
 
+def get_song_files(song_folder: str):
+    """Return a list of .mp4 song files in the given folder."""
+    return [f for f in os.listdir(song_folder) if f.lower().endswith(".mp4")]
+
+
+def process_song(song_file_path: str, song: str, stop_event: threading.Event):
+    """Process a single song: load spreadsheet, compile actions, and coordinate robots."""
+    spreadsheet_loader = SpreadsheetLoader(
+        action_sequence_spreadsheet_id, action_details_spreadsheet_id, song
+    )
+    action_compiler = ActionCompiler(spreadsheet_loader)
+    robot_actions = action_compiler.compile_actions()
+    action_name_to_time = spreadsheet_loader.get_action_name_to_time()
+    action_name_to_repeat_time = spreadsheet_loader.get_action_name_to_repeat_time()
+    robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
+
+    # Play the song before starting robot actions
+    play_song(song_file_path)
+    for row in robot_actions:
+        logger.info(f"Processing row: {row}")
+        try:
+            execute_robot_actions(robots, row, stop_event)
+            if stop_event.is_set():
+                logger.info("Stop event detected in main loop. Exiting...")
+                return
+        except KeyboardInterrupt:
+            logger.info("Main loop interrupted by user (Ctrl+C). Exiting...")
+            stop_event.set()
+            return
+    stop_song()
+
+
 def main() -> None:
     """Main function to load spreadsheet and coordinate robot actions."""
-
     song_folder = os.path.join(os.path.dirname(__file__), "song")
     stop_event = threading.Event()
     try:
         # Load the spreadsheet data
-
-        song_files = [f for f in os.listdir(song_folder) if f.lower().endswith(".mp4")]
+        song_files = get_song_files(song_folder)
         if not song_files:
             logger.error(f"No .mp4 files found in {song_folder}")
             return
@@ -120,36 +148,9 @@ def main() -> None:
             song = os.path.splitext(song_file)[0]
             song_file_path = os.path.join(song_folder, song_file)
 
-            logger.info(
-                f"Loading spreadsheet with ID: {ACTION_SEQUENCE_SPREADSHEET_ID} and action details ID: {ACTION_DETAILS_SPREADSHEET_ID}"
-            )
             logger.info(f"Current song: {song_file_path}")
-
-            spreadsheet_loader = SpreadsheetLoader(
-                ACTION_SEQUENCE_SPREADSHEET_ID, ACTION_DETAILS_SPREADSHEET_ID, song
-            )
-
-            action_compiler = ActionCompiler(spreadsheet_loader)
-            robot_actions = action_compiler.compile_actions()
-            action_name_to_time = spreadsheet_loader.get_action_name_to_time()
-            action_name_to_repeat_time = (
-                spreadsheet_loader.get_action_name_to_repeat_time()
-            )
-            robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
-
-            # Play the song before starting robot actions
-            play_song(song_file_path)
-            for row in robot_actions:
-                logger.info(f"Processing row: {row}")
-                try:
-                    execute_robot_actions(robots, row, stop_event)
-                    if stop_event.is_set():
-                        logger.info("Stop event detected in main loop. Exiting...")
-                        return
-                except KeyboardInterrupt:
-                    logger.info("Main loop interrupted by user (Ctrl+C). Exiting...")
-                    stop_event.set()
-                    return
+            process_song(song_file_path, song, stop_event)
+            time.sleep(3)
 
     except (KeyError, ValueError, TypeError) as e:
         logger.error(f"An error occurred in the main program: {e}")
