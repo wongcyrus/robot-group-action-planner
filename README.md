@@ -13,7 +13,7 @@ A tool to control multiple robots using Google Spreadsheets.
 
 Clone the repository:
 ```bash
-git clone https://github.com/yourusername/robot-group-action-planner.git
+git clone https://github.com/wongcyrus/robot-group-action-planner
 ```
 
 
