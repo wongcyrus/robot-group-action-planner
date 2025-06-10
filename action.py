@@ -7,11 +7,8 @@ import requests
 
 class RobotAction:
     """
-    A class to handle robot action operations including sending commands
-    and executing predefined actions.
-
-    This class provides an interface to communicate with robot APIs and
-    execute actions defined in the action details spreadsheet.
+    Handles robot action operations including sending commands and executing predefined actions.
+    Provides an interface to communicate with robot APIs and execute actions defined in the action details spreadsheet.
     """
 
     def __init__(
@@ -33,22 +30,19 @@ class RobotAction:
         self.api_url = api_url
         self.device_id = device_id
         self.actions = action_name_to_time
-        self.repeat_actions = action_name_to_repeat_time
+        self.repeat_actions = action_name_to_repeat_time or {}
         self.logger = logging.getLogger("RobotAction")
 
     def run_action(self, name: str, stop_event=None) -> Optional[Dict[str, Any]]:
         """
-        Run a specific robot action or sequence of actions.
-
-        This method supports multi-line action names, where each line represents
-        a separate action to be executed in sequence.
+        Run one or more robot actions (multi-line supported).
 
         Args:
-            name: The name of the action(s) to run, can be multi-line
-            stop_event: Optional threading.Event to allow interruption
+            name: Action name(s), possibly multi-line.
+            stop_event: Optional threading.Event for interruption.
 
         Returns:
-            Optional response data from the last API call
+            Optional response data from the last API call.
         """
         # Handle multi-line names: split by newlines, strip whitespace, and filter out empty names
         names = [n.strip() for n in name.splitlines() if n.strip()]
@@ -64,11 +58,12 @@ class RobotAction:
                 continue
 
             sleep_time = self.actions[n]
+            repeat = self.repeat_actions.get(n, 1)
             result = self._send_request(
                 method="RunAction",
-                params=[n, self.repeat_actions.get(n, 1)],
-                log_success_msg=f"Action run_action({n}, {self.repeat_actions.get(n, 1)}) successful.",
-                log_error_msg=f"Error running action run_action({n}, {self.repeat_actions.get(n, 1)}):",
+                params=[n, repeat],
+                log_success_msg=f"Action run_action({n}, {repeat}) successful.",
+                log_error_msg=f"Error running action run_action({n}, {repeat}):",
             )
             results.append(result)
 
@@ -88,31 +83,13 @@ class RobotAction:
         return results[-1] if results else None
 
     def run_stop_action(self) -> Optional[Dict[str, Any]]:
-        """
-        Stop any currently running robot action.
-
-        Returns:
-            Optional response data from the API call
-        """
+        """Stop any currently running robot action."""
         return self._send_request(
             method="StopBusServo",
             params=["stopAction"],
             log_success_msg="Action run_stop_action() successful.",
             log_error_msg="Error running action run_stop_action():",
         )
-
-    def _run_action(self, p1: str) -> Optional[Dict[str, Any]]:
-        """
-        Private method to run an action using the run_action method.
-
-        Args:
-            p1: First parameter for the action
-            p2: Second parameter for the action
-
-        Returns:
-            Optional response data from the API call
-        """
-        return self.run_action(p1)
 
     def _send_request(
         self,
