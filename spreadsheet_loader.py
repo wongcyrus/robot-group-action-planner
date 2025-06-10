@@ -4,18 +4,23 @@ from typing import Dict, List, Optional
 
 import requests
 
+from constant import (
+    ACTION_DETAILS_SPREADSHEET_ID,
+    ACTION_SEQUENCE_SPREADSHEET_ID,
+    ROBOT_IPS,
+)
+
 
 class SpreadsheetLoader:
     """Class for loading and parsing Google Spreadsheet data."""
 
     def __init__(
         self,
-        robot_actions_spreadsheet_id: Optional[str] = None,
-        action_details_spreadsheet_id: Optional[str] = None,
-        dance: Optional[str] = None,
+        dance: str,
     ):
-        self.robot_actions_spreadsheet_id = robot_actions_spreadsheet_id
-        self.action_details_spreadsheet_id = action_details_spreadsheet_id
+
+        self.robot_actions_spreadsheet_id = ACTION_SEQUENCE_SPREADSHEET_ID
+        self.action_details_spreadsheet_id = ACTION_DETAILS_SPREADSHEET_ID
         self.dance = dance
         self.robot_actions_data = (
             self._load_robot_actions() if self.robot_actions_spreadsheet_id else []
