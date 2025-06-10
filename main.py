@@ -6,6 +6,7 @@ from typing import Dict
 
 from action import RobotAction
 from action_compiler import ActionCompiler
+from constant import ROBOT_IPS
 from song_player import play_song, stop_song
 from spreadsheet_loader import SpreadsheetLoader
 
@@ -15,26 +16,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Constants
-action_sequence_spreadsheet_id = "1JmjO4Yidu2pLtJxEuu4mYPX14AYmEj0przne75JBg6Y"
-action_details_spreadsheet_id = "1Bsgc60s3m_-dxhneTedxFlCCYxEp-9Ippu3Yr8dekxo"
-
-ROBOT_IPS = {
-    1: "http://192.168.137.7:9030",
-    2: "http://192.168.137.2:9030",
-    3: "http://192.168.137.3:9030",
-    4: "http://192.168.137.4:9030",
-    5: "http://192.168.137.5:9030",
-    6: "http://192.168.137.6:9030",
-}
-
 
 def initialize_robots(
     action_name_to_time: Dict, action_name_to_repeat_time: Dict
 ) -> Dict[int, RobotAction]:
     """Initialize all robot connections and return them as a dictionary."""
     robots = {}
-    for robot_id, ip_address in ROBOT_IPS.items():
+    for idx, ip_address in enumerate(ROBOT_IPS):
+        robot_id = idx + 1
         try:
             robots[robot_id] = RobotAction(
                 ip_address, action_name_to_time, action_name_to_repeat_time
@@ -102,9 +91,7 @@ def get_song_files(song_folder: str):
 
 def process_song(song_file_path: str, song: str, stop_event: threading.Event):
     """Process a single song: load spreadsheet, compile actions, and coordinate robots."""
-    spreadsheet_loader = SpreadsheetLoader(
-        action_sequence_spreadsheet_id, action_details_spreadsheet_id, song
-    )
+    spreadsheet_loader = SpreadsheetLoader(song)
     action_compiler = ActionCompiler(spreadsheet_loader)
     robot_actions = action_compiler.compile_actions()
     action_name_to_time = spreadsheet_loader.get_action_name_to_time()
