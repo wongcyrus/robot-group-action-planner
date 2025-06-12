@@ -1,7 +1,7 @@
 # Constants for robot-group-action-planner
 
 # Google Spreadsheet IDs
-ACTION_SEQUENCE_SPREADSHEET_ID = "1JmjO4Yidu2pLtJxEuu4mYPX14AYmEj0przne75JBg6Y"
+ACTION_SEQUENCE_SPREADSHEET_ID = "17DqsmqCkoggsNeH2iFZmZ696U30Nz7OmWw8KzJj1B6k"
 ACTION_DETAILS_SPREADSHEET_ID = "1Bsgc60s3m_-dxhneTedxFlCCYxEp-9Ippu3Yr8dekxo"
 
 # Robot IP addresses
