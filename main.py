@@ -26,7 +26,7 @@ def initialize_robots(
         robot_id = idx + 1
         try:
             robots[robot_id] = RobotAction(
-                ip_address, action_name_to_time, action_name_to_repeat_time
+                ip_address, action_name_to_time, action_name_to_repeat_time, "robot_"+ str(robot_id)
             )
             logger.info(f"Robot {robot_id} initialized at {ip_address}")
         except (ConnectionError, OSError, ValueError) as e:
@@ -57,6 +57,7 @@ def execute_robot_actions(
         for thread in threads:
             thread.start()
 
+        logger.info(f"Waiting for {time_value} seconds")
         # Wait for all threads to complete
         for thread in threads:
             while thread.is_alive():
@@ -64,17 +65,7 @@ def execute_robot_actions(
                 if stop_event.is_set():
                     logger.info("Stop event set, breaking join loop.")
                     break
-
-        # Wait for the specified time before the next action, but check for stop_event
-        logger.info(f"Waiting for {time_value} seconds")
-        waited = 0.0
-        interval = 0.1
-        while waited < float(time_value):
-            if stop_event.is_set():
-                logger.info("Stop event set during wait, breaking sleep loop.")
-                break
-            time.sleep(interval)
-            waited += interval
+        logger.info("All robot actions completed successfully.")                    
 
     except (KeyError, ValueError, TypeError) as e:
         logger.error(f"Error executing robot actions: {e}")

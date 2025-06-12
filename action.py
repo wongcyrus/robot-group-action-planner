@@ -44,15 +44,18 @@ class RobotAction:
         Returns:
             Optional response data from the last API call.
         """
-        # Handle multi-line names: split by newlines, strip whitespace, and filter out empty names
-        names = [n.strip() for n in name.splitlines() if n.strip()]
+        # Handle single or multi-line names: split by newlines if present, else use as single action
+        if "\n" in name:
+            names = [n.strip() for n in name.splitlines() if n.strip()]
+        else:
+            names = [name.strip()] if name.strip() else []
         results = []
 
         for n in names:
             if stop_event is not None and stop_event.is_set():
                 self.logger.info("Action interrupted by stop_event.")
                 break
-            self.logger.info(f"Running action: {n}")
+            # self.logger.info(f"Running action: {n}")
             if n not in self.actions:
                 self.logger.error(f"Action '{n}' not found in actions dictionary.")
                 continue
@@ -67,18 +70,17 @@ class RobotAction:
             )
             results.append(result)
 
-            # If executing multiple actions, wait for the specified time between them
-            if len(names) > 1:
-                waited = 0.0
-                interval = 0.1
-                while waited < float(sleep_time):
-                    if stop_event is not None and stop_event.is_set():
-                        self.logger.info(
-                            "Action interrupted by stop_event during sleep."
-                        )
-                        break
-                    time.sleep(interval)
-                    waited += interval
+            
+            waited = 0.0
+            interval = 0.1
+            while waited < float(sleep_time):
+                if stop_event is not None and stop_event.is_set():
+                    self.logger.info(
+                        "Action interrupted by stop_event during sleep."
+                    )
+                    break
+                time.sleep(interval)
+                waited += interval
 
         return results[-1] if results else None
 
@@ -110,9 +112,9 @@ class RobotAction:
         Returns:
             Optional response data from the API call
         """
-        headers = {"deviceid": self.device_id}
+        headers = {"deviceid": "12345"}
         data = {
-            "id": self.device_id,
+            "id": "12345",
             "jsonrpc": "2.0",
             "method": method,
         }
@@ -124,7 +126,7 @@ class RobotAction:
             )
             response.raise_for_status()
             resp_json = response.json()
-            self.logger.info("%s Response: %s", log_success_msg, resp_json)
+            self.logger.info("%s - %s Response: %s", self.device_id, log_success_msg, resp_json)
             return resp_json
         except requests.exceptions.RequestException as e:
             self.logger.error("%s %s", log_error_msg, e)
