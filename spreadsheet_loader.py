@@ -4,11 +4,7 @@ from typing import Dict, List, Optional
 
 import requests
 
-from constant import (
-    ACTION_DETAILS_SPREADSHEET_ID,
-    ACTION_SEQUENCE_SPREADSHEET_ID,
-    ROBOT_IPS,
-)
+from constant import ACTION_DETAILS_SPREADSHEET_ID, ACTION_SEQUENCE_SPREADSHEET_ID
 
 
 class SpreadsheetLoader:
