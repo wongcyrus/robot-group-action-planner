@@ -4,9 +4,11 @@ import threading
 import time
 from typing import Dict
 
+import requests
+
 from action import RobotAction
 from action_compiler import ActionCompiler
-from constant import ROBOT_IPS
+from constant import ROBOT_IPS, SESSION_KEY, SIMULATOR_BASE_URL, SONG_BUCKET
 from song_player import play_song, stop_song
 from spreadsheet_loader import SpreadsheetLoader
 
@@ -26,7 +28,10 @@ def initialize_robots(
         robot_id = idx + 1
         try:
             robots[robot_id] = RobotAction(
-                ip_address, action_name_to_time, action_name_to_repeat_time, "robot_"+ str(robot_id)
+                ip_address,
+                action_name_to_time,
+                action_name_to_repeat_time,
+                "robot_" + str(robot_id),
             )
             logger.info(f"Robot {robot_id} initialized at {ip_address}")
         except (ConnectionError, OSError, ValueError) as e:
@@ -65,7 +70,7 @@ def execute_robot_actions(
                 if stop_event.is_set():
                     logger.info("Stop event set, breaking join loop.")
                     break
-        logger.info("All robot actions completed successfully.")                    
+        logger.info("All robot actions completed successfully.")
 
     except (KeyError, ValueError, TypeError) as e:
         logger.error(f"Error executing robot actions: {e}")
@@ -91,6 +96,9 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
 
     # Play the song before starting robot actions
     play_song(song_file_path)
+    # Notify the simulator to change the video source before starting robot actions
+    play_song_in_simulator(song)
+
     for row in robot_actions:
         logger.info(f"Processing row: {row}")
         try:
@@ -103,6 +111,26 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
             stop_event.set()
             return
     stop_song()
+
+
+def play_song_in_simulator(song):
+    try:
+        response = requests.post(
+            f"{SIMULATOR_BASE_URL}/api/video/change_source?session_key={SESSION_KEY}",
+            headers={"Content-Type": "application/json"},
+            json={
+                "video_src": f"https://storage.googleapis.com/{SONG_BUCKET}/{song}.mp4"
+            },
+            timeout=3,
+        )
+        if response.status_code == 200:
+            logger.info(f"Simulator video source changed successfully for {song}.")
+        else:
+            logger.warning(
+                f"Failed to change simulator video source: {response.status_code} {response.text}"
+            )
+    except requests.RequestException as e:
+        logger.error(f"Error calling simulator API: {e}")
 
 
 def main() -> None:
