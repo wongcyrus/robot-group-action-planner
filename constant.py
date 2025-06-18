@@ -13,3 +13,7 @@ ROBOT_IPS = [
     "http://192.168.137.5:9030",
     "http://192.168.137.6:9030",
 ]
+
+SIMULATOR_BASE_URL = "https://humanoid-robot-simulator-74gfpibg5q-uc.a.run.app"
+SESSION_KEY = "cywong@vtc.edu.hk"
+SONG_BUCKET = "hkiit-robotshow"
