@@ -68,6 +68,8 @@ class SpreadsheetLoader:
             "Robot_4",
             "Robot_5",
             "Robot_6",
+            "Drone_1",
+            "Drone_2",
         ]
         return self._load_csv_data(f, columns)
 
