@@ -9,6 +9,8 @@ import requests
 from action import RobotAction
 from action_compiler import ActionCompiler
 from constant import ROBOT_IPS, SESSION_KEY, SIMULATOR_BASE_URL, SONG_BUCKET
+from djitellopy import Tello
+from drone_action import DroneAction
 from song_player import play_song, stop_song
 from spreadsheet_loader import SpreadsheetLoader
 
@@ -39,16 +41,61 @@ def initialize_robots(
     return robots
 
 
+SIMULATOR = True
+
+
+def initialize_drones(
+    action_name_to_time: Dict, action_name_to_repeat_time: Dict
+) -> Dict[int, DroneAction]:
+    """Initialize all drones and return them as a dictionary."""
+
+    if SIMULATOR:
+        simulator_ip = "192.168.25.128"
+        drone1 = Tello(host=simulator_ip, control_udp=8889, state_udp=8890)
+        drone2 = Tello(host=simulator_ip, control_udp=8890, state_udp=8891)
+    else:
+        drone_hosts = ["192.168.137.21", "192.168.137.22"]
+        # Real drone
+        drone1 = Tello(host=drone_hosts[0])
+        drone2 = Tello(host=drone_hosts[1])
+    drones = [drone1, drone2]
+
+    drone1.connect()
+    drone2.connect()
+
+    # Create DroneAction instances
+    drone_action1 = DroneAction(
+        drone1,
+        action_name_to_time,
+        action_name_to_repeat_time,
+        "drone_1",
+    )
+    drone_action2 = DroneAction(
+        drone2,
+        action_name_to_time,
+        action_name_to_repeat_time,
+        "drone_2",
+    )
+
+    drones = {1: drone_action1, 2: drone_action2}
+    return drones
+
+
 def execute_robot_actions(
-    robots: Dict[int, RobotAction], row: Dict[str, str], stop_event: threading.Event
+    robots: Dict[int, RobotAction],
+    drones: Dict[int, DroneAction],
+    row: Dict[str, str],
+    stop_event: threading.Event,
 ) -> None:
-    """Execute robot actions from a row of spreadsheet data."""
+    """Execute robot and drone actions from a row of spreadsheet data."""
     try:
         time_value = row["Time"]
         logger.info(f"Executing actions with time value: {time_value}")
 
         # Create threads for all robots with actions
         threads = []
+
+        # Process robot actions
         for robot_id, robot in robots.items():
             action_key = f"Robot_{robot_id}"
             action = row.get(action_key)
@@ -56,6 +103,16 @@ def execute_robot_actions(
             if action:
                 logger.info(f"Robot {robot_id} will perform: {action}")
                 t = threading.Thread(target=robot.run_action, args=(action, stop_event))
+                threads.append(t)
+
+        # Process drone actions
+        for drone_id, drone in drones.items():
+            action_key = f"Drone_{drone_id}"
+            action = row.get(action_key)
+
+            if action:
+                logger.info(f"Drone {drone_id} will perform: {action}")
+                t = threading.Thread(target=drone.run_action, args=(action, stop_event))
                 threads.append(t)
 
         # Start all threads
@@ -70,10 +127,10 @@ def execute_robot_actions(
                 if stop_event.is_set():
                     logger.info("Stop event set, breaking join loop.")
                     break
-        logger.info("All robot actions completed successfully.")
+        logger.info("All robot and drone actions completed successfully.")
 
     except (KeyError, ValueError, TypeError) as e:
-        logger.error(f"Error executing robot actions: {e}")
+        logger.error(f"Error executing robot and drone actions: {e}")
     except KeyboardInterrupt:
         logger.info("Execution interrupted by user (Ctrl+C)")
         stop_event.set()
@@ -93,9 +150,10 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
     action_name_to_time = spreadsheet_loader.get_action_name_to_time()
     action_name_to_repeat_time = spreadsheet_loader.get_action_name_to_repeat_time()
     robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
+    drones = initialize_drones(action_name_to_time, action_name_to_repeat_time)
 
     if SIMULATOR_BASE_URL is None:
-    # Play the song before starting robot actions
+        # Play the song before starting robot actions
         play_song(song_file_path)
     # Notify the simulator to change the video source before starting robot actions
     else:
@@ -104,7 +162,7 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
     for row in robot_actions:
         logger.info(f"Processing row: {row}")
         try:
-            execute_robot_actions(robots, row, stop_event)
+            execute_robot_actions(robots, drones, row, stop_event)
             if stop_event.is_set():
                 logger.info("Stop event detected in main loop. Exiting...")
                 return
@@ -112,7 +170,7 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
             logger.info("Main loop interrupted by user (Ctrl+C). Exiting...")
             stop_event.set()
             return
-    if SIMULATOR_BASE_URL is None:    
+    if SIMULATOR_BASE_URL is None:
         stop_song()
 
 
