@@ -123,42 +123,42 @@ class DroneAction:
 
             elif action_name_lower.startswith("move_up"):
                 # Extract distance if provided, default to 20cm
-                distance = self._extract_distance(action_name_lower, 20)
+                distance = self._extract_distance(action_name_lower, 100)
                 self.drone.move_up(distance)
                 self.logger.info(
                     f"Drone {self.drone_id}: Move up {distance}cm executed"
                 )
 
             elif action_name_lower.startswith("move_down"):
-                distance = self._extract_distance(action_name_lower, 20)
+                distance = self._extract_distance(action_name_lower, 100)
                 self.drone.move_down(distance)
                 self.logger.info(
                     f"Drone {self.drone_id}: Move down {distance}cm executed"
                 )
 
             elif action_name_lower.startswith("move_left"):
-                distance = self._extract_distance(action_name_lower, 20)
+                distance = self._extract_distance(action_name_lower, 100)
                 self.drone.move_left(distance)
                 self.logger.info(
                     f"Drone {self.drone_id}: Move left {distance}cm executed"
                 )
 
             elif action_name_lower.startswith("move_right"):
-                distance = self._extract_distance(action_name_lower, 20)
+                distance = self._extract_distance(action_name_lower, 100)
                 self.drone.move_right(distance)
                 self.logger.info(
                     f"Drone {self.drone_id}: Move right {distance}cm executed"
                 )
 
             elif action_name_lower.startswith("move_forward"):
-                distance = self._extract_distance(action_name_lower, 20)
+                distance = self._extract_distance(action_name_lower, 100)
                 self.drone.move_forward(distance)
                 self.logger.info(
                     f"Drone {self.drone_id}: Move forward {distance}cm executed"
                 )
 
             elif action_name_lower.startswith("move_back"):
-                distance = self._extract_distance(action_name_lower, 20)
+                distance = self._extract_distance(action_name_lower, 100)
                 self.drone.move_back(distance)
                 self.logger.info(
                     f"Drone {self.drone_id}: Move back {distance}cm executed"
@@ -236,17 +236,17 @@ class DroneAction:
 
         # Define default timings for different types of drone actions
         if action_name_lower in ["takeoff", "land"]:
-            return 5.0  # Takeoff and landing take a bit longer
+            return 2.0  # Takeoff and landing take a bit longer
         elif action_name_lower.startswith("move_"):
-            return 5.0  # Movement actions
+            return 2.0  # Movement actions
         elif action_name_lower.startswith("rotate_"):
-            return 5.0  # Rotation actions
+            return 2.0  # Rotation actions
         elif action_name_lower.startswith("flip_"):
-            return 5.0  # Flip actions
+            return 2.0  # Flip actions
         elif action_name_lower == "hover":
-            return 5.0  # Hover action
+            return 2.0  # Hover action
         else:
-            return 5.0  # Default for unknown actions
+            return 2.0  # Default for unknown actions
 
     def emergency_stop(self):
         """Emergency stop the drone."""
