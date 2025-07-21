@@ -8,7 +8,17 @@ import requests
 
 from action import RobotAction
 from action_compiler import ActionCompiler
-from constant import ROBOT_IPS, SESSION_KEY, SIMULATOR_BASE_URL, SONG_BUCKET
+from constant import (
+    DRONE_REAL_HOSTS,
+    DRONE_SIMULATOR,
+    DRONE_SIMULATOR_IP,
+    DRONE_SIMULATOR_PORTS,
+    ROBOT_IPS,
+    SESSION_KEY,
+    SIMULATOR_BASE_URL,
+    SKIP_DRONES,
+    SONG_BASE_URL,
+)
 from djitellopy import Tello
 from drone_action import DroneAction
 from song_player import play_song, stop_song
@@ -41,23 +51,26 @@ def initialize_robots(
     return robots
 
 
-SIMULATOR = True
-
-
 def initialize_drones(
     action_name_to_time: Dict, action_name_to_repeat_time: Dict
 ) -> Dict[int, DroneAction]:
     """Initialize all drones and return them as a dictionary."""
 
-    if SIMULATOR:
-        simulator_ip = "192.168.25.128"
-        drone1 = Tello(host=simulator_ip, control_udp=8889, state_udp=8890)
-        drone2 = Tello(host=simulator_ip, control_udp=8890, state_udp=8891)
+    if DRONE_SIMULATOR:
+        drone1 = Tello(
+            host=DRONE_SIMULATOR_IP,
+            control_udp=DRONE_SIMULATOR_PORTS["drone1"]["control_udp"],
+            state_udp=DRONE_SIMULATOR_PORTS["drone1"]["state_udp"],
+        )
+        drone2 = Tello(
+            host=DRONE_SIMULATOR_IP,
+            control_udp=DRONE_SIMULATOR_PORTS["drone2"]["control_udp"],
+            state_udp=DRONE_SIMULATOR_PORTS["drone2"]["state_udp"],
+        )
     else:
-        drone_hosts = ["192.168.137.21", "192.168.137.22"]
         # Real drone
-        drone1 = Tello(host=drone_hosts[0])
-        drone2 = Tello(host=drone_hosts[1])
+        drone1 = Tello(host=DRONE_REAL_HOSTS[0])
+        drone2 = Tello(host=DRONE_REAL_HOSTS[1])
     drones = [drone1, drone2]
 
     drone1.connect()
@@ -106,14 +119,20 @@ def execute_robot_actions(
                 threads.append(t)
 
         # Process drone actions
-        for drone_id, drone in drones.items():
-            action_key = f"Drone_{drone_id}"
-            action = row.get(action_key)
+        if not drones:
+            logger.info("No drones initialized, skipping drone actions.")
+            # You can return here if you want to skip the rest, or just continue
+        else:
+            for drone_id, drone in drones.items():
+                action_key = f"Drone_{drone_id}"
+                action = row.get(action_key)
 
-            if action:
-                logger.info(f"Drone {drone_id} will perform: {action}")
-                t = threading.Thread(target=drone.run_action, args=(action, stop_event))
-                threads.append(t)
+                if action:
+                    logger.info(f"Drone {drone_id} will perform: {action}")
+                    t = threading.Thread(
+                        target=drone.run_action, args=(action, stop_event)
+                    )
+                    threads.append(t)
 
         # Start all threads
         for thread in threads:
@@ -150,7 +169,10 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
     action_name_to_time = spreadsheet_loader.get_action_name_to_time()
     action_name_to_repeat_time = spreadsheet_loader.get_action_name_to_repeat_time()
     robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
-    drones = initialize_drones(action_name_to_time, action_name_to_repeat_time)
+    if SKIP_DRONES:
+        drones = []
+    else:
+        drones = initialize_drones(action_name_to_time, action_name_to_repeat_time)
 
     if SIMULATOR_BASE_URL is None:
         # Play the song before starting robot actions
@@ -179,9 +201,7 @@ def play_song_in_simulator(song):
         response = requests.post(
             f"{SIMULATOR_BASE_URL}/api/video/change_source?session_key={SESSION_KEY}",
             headers={"Content-Type": "application/json"},
-            json={
-                "video_src": f"https://storage.googleapis.com/{SONG_BUCKET}/{song}.mp4"
-            },
+            json={"video_src": f"{SONG_BASE_URL}/{song}.mp4"},
             timeout=3,
         )
         if response.status_code == 200:
