@@ -15,15 +15,16 @@ ROBOT_IPS = [
 ]
 
 # Drone configuration
-DRONE_SIMULATOR = True
+DRONE_SIMULATOR = False
 DRONE_SIMULATOR_IP = "192.168.25.128"
-DRONE_REAL_HOSTS = ["192.168.137.21", "192.168.137.22"]
+DRONE_REAL_HOSTS = ["192.168.137.31", "192.168.137.32"]
 DRONE_SIMULATOR_PORTS = {
     "drone1": {"control_udp": 8889, "state_udp": 8890},
     "drone2": {"control_udp": 8890, "state_udp": 8891},
 }
 
 SIMULATOR_BASE_URL = "https://iyfjqmah49.us-east-1.awsapprunner.com"
-SESSION_KEY = "cywong@vtc.edu.hk"
+SESSION_KEY = "hkiitshow"
 SONG_BASE_URL = "https://cdkstack-robotsimulatorconstructrobotsimulatorwebs-fxuvfxmglhc4.s3.us-east-1.amazonaws.com"
-SKIP_DRONES = True  # Set to True to skip drone initialization
+
+SKIP_DRONES = False  # Set to True to skip drone initialization
