@@ -55,42 +55,49 @@ def initialize_drones(
     action_name_to_time: Dict, action_name_to_repeat_time: Dict
 ) -> Dict[int, DroneAction]:
     """Initialize all drones and return them as a dictionary."""
-
+    
+    drones = {}
+    tello_instances = []
+    
     if DRONE_SIMULATOR:
-        drone1 = Tello(
-            host=DRONE_SIMULATOR_IP,
-            control_udp=DRONE_SIMULATOR_PORTS["drone1"]["control_udp"],
-            state_udp=DRONE_SIMULATOR_PORTS["drone1"]["state_udp"],
-        )
-        drone2 = Tello(
-            host=DRONE_SIMULATOR_IP,
-            control_udp=DRONE_SIMULATOR_PORTS["drone2"]["control_udp"],
-            state_udp=DRONE_SIMULATOR_PORTS["drone2"]["state_udp"],
-        )
+        # For simulator, use the predefined ports (limited to 2 drones)
+        simulator_drones = ["drone1", "drone2"]
+        for i, drone_key in enumerate(simulator_drones):
+            if i >= len(DRONE_REAL_HOSTS):  # Don't exceed the number of configured hosts
+                break
+            tello = Tello(
+                host=DRONE_SIMULATOR_IP,
+                control_udp=DRONE_SIMULATOR_PORTS[drone_key]["control_udp"],
+                state_udp=DRONE_SIMULATOR_PORTS[drone_key]["state_udp"],
+            )
+            tello_instances.append(tello)
     else:
-        # Real drone
-        drone1 = Tello(host=DRONE_REAL_HOSTS[0])
-        drone2 = Tello(host=DRONE_REAL_HOSTS[1])
-    drones = [drone1, drone2]
-
-    drone1.connect()
-    drone2.connect()
+        # Real drones - create based on DRONE_REAL_HOSTS length
+        for host in DRONE_REAL_HOSTS:
+            tello = Tello(host=host)
+            tello_instances.append(tello)
+    
+    # Connect all drones
+    for i, tello in enumerate(tello_instances):
+        try:
+            tello.connect()
+            logger.info(f"Drone {i+1} connected successfully")
+        except Exception as e:
+            logger.error(f"Failed to connect to drone {i+1}: {e}")
+            continue
 
     # Create DroneAction instances
-    drone_action1 = DroneAction(
-        drone1,
-        action_name_to_time,
-        action_name_to_repeat_time,
-        "drone_1",
-    )
-    drone_action2 = DroneAction(
-        drone2,
-        action_name_to_time,
-        action_name_to_repeat_time,
-        "drone_2",
-    )
+    for i, tello in enumerate(tello_instances):
+        drone_id = i + 1
+        drone_action = DroneAction(
+            tello,
+            action_name_to_time,
+            action_name_to_repeat_time,
+            f"drone_{drone_id}",
+        )
+        drones[drone_id] = drone_action
+        logger.info(f"Drone {drone_id} initialized")
 
-    drones = {1: drone_action1, 2: drone_action2}
     return drones
 
 
