@@ -69,17 +69,26 @@ class DroneAction:
                 )
 
             # Execute the drone action multiple times if needed
-            for _ in range(repeat):
+            threads = []
+            def action_thread():
                 if stop_event is not None and stop_event.is_set():
                     self.logger.info(
                         "Drone action interrupted by stop_event during repeat."
                     )
-                    break
-
+                    return
                 success = self._execute_drone_command(n)
                 if not success:
                     self.logger.error(f"Failed to execute drone action: {n}")
-                    return False
+
+            for _ in range(repeat):
+                t = threading.Thread(target=action_thread)
+                t.start()
+                threads.append(t)
+                if repeat > 1:
+                    time.sleep(0.1)
+
+            for t in threads:
+                t.join()
 
                 # Small delay between repeats
                 if repeat > 1:
@@ -114,6 +123,7 @@ class DroneAction:
             action_name_lower = action_name.lower()
 
             if action_name_lower == "takeoff":
+                self.drone.set_speed(100)  # Set a reasonable speed for takeoff
                 self.drone.takeoff()
                 self.logger.info(f"Drone {self.drone_id}: Takeoff executed")
 
@@ -198,55 +208,55 @@ class DroneAction:
                 # Hover is essentially doing nothing for the specified time
                 self.logger.info(f"Drone {self.drone_id}: Hover executed")
 
-            elif action_name_lower.startswith("go_xyz"):
-                # Parse go_xyz_speed command: go_xyz_x_y_z_speed or go_xyz_x_y_z_speed_mid
-                params = self._parse_xyz_command(action_name_lower, "go_xyz")
+            elif action_name_lower.startswith("go"):
+                # Parse go command: go_x_y_z_speed or go_x_y_z_speed_mid
+                params = self._parse_command(action_name_lower, "go")
                 if params:
-                    if len(params) == 4:  # go_xyz_speed
+                    if len(params) == 4:  # go_x_y_z_speed
                         x, y, z, speed = params
                         self.drone.go_xyz_speed(x, y, z, speed)
                         self.logger.info(
                             f"Drone {self.drone_id}: Go to ({x}, {y}, {z}) at speed {speed}cm/s executed"
                         )
-                    elif len(params) == 5:  # go_xyz_speed_mid
+                    elif len(params) == 5:  # go_x_y_z_speed_mid
                         x, y, z, speed, mid = params
                         self.drone.go_xyz_speed_mid(x, y, z, speed, mid)
                         self.logger.info(
                             f"Drone {self.drone_id}: Go to ({x}, {y}, {z}) relative to pad {mid} at speed {speed}cm/s executed"
                         )
                     else:
-                        self.logger.error(f"Invalid go_xyz parameters: {action_name}")
+                        self.logger.error(f"Invalid go parameters: {action_name}")
                         return False
                 else:
-                    self.logger.error(f"Failed to parse go_xyz command: {action_name}")
+                    self.logger.error(f"Failed to parse go command: {action_name}")
                     return False
 
-            elif action_name_lower.startswith("curve_xyz"):
-                # Parse curve_xyz_speed command: curve_xyz_x1_y1_z1_x2_y2_z2_speed or curve_xyz_x1_y1_z1_x2_y2_z2_speed_mid
-                params = self._parse_xyz_command(action_name_lower, "curve_xyz")
+            elif action_name_lower.startswith("curve"):
+                # Parse curve command: curve_x1_y1_z1_x2_y2_z2_speed or curve_x1_y1_z1_x2_y2_z2_speed_mid
+                params = self._parse_command(action_name_lower, "curve")
                 if params:
-                    if len(params) == 7:  # curve_xyz_speed
+                    if len(params) == 7:  # curve_x1_y1_z1_x2_y2_z2_speed
                         x1, y1, z1, x2, y2, z2, speed = params
                         self.drone.curve_xyz_speed(x1, y1, z1, x2, y2, z2, speed)
                         self.logger.info(
                             f"Drone {self.drone_id}: Curve from ({x1}, {y1}, {z1}) to ({x2}, {y2}, {z2}) at speed {speed}cm/s executed"
                         )
-                    elif len(params) == 8:  # curve_xyz_speed_mid
+                    elif len(params) == 8:  # curve_x1_y1_z1_x2_y2_z2_speed_mid
                         x1, y1, z1, x2, y2, z2, speed, mid = params
                         self.drone.curve_xyz_speed_mid(x1, y1, z1, x2, y2, z2, speed, mid)
                         self.logger.info(
                             f"Drone {self.drone_id}: Curve from ({x1}, {y1}, {z1}) to ({x2}, {y2}, {z2}) relative to pad {mid} at speed {speed}cm/s executed"
                         )
                     else:
-                        self.logger.error(f"Invalid curve_xyz parameters: {action_name}")
+                        self.logger.error(f"Invalid curve parameters: {action_name}")
                         return False
                 else:
-                    self.logger.error(f"Failed to parse curve_xyz command: {action_name}")
+                    self.logger.error(f"Failed to parse curve command: {action_name}")
                     return False
 
-            elif action_name_lower.startswith("jump_xyz"):
-                # Parse go_xyz_speed_yaw_mid command: jump_xyz_x_y_z_speed_yaw_mid1_mid2
-                params = self._parse_xyz_command(action_name_lower, "jump_xyz")
+            elif action_name_lower.startswith("jump"):
+                # Parse jump command: jump_x_y_z_speed_yaw_mid1_mid2
+                params = self._parse_command(action_name_lower, "jump")
                 if params and len(params) == 7:
                     x, y, z, speed, yaw, mid1, mid2 = params
                     self.drone.go_xyz_speed_yaw_mid(x, y, z, speed, yaw, mid1, mid2)
@@ -254,7 +264,7 @@ class DroneAction:
                         f"Drone {self.drone_id}: Jump to ({x}, {y}, {z}) with yaw {yaw}° from pad {mid1} to pad {mid2} at speed {speed}cm/s executed"
                     )
                 else:
-                    self.logger.error(f"Failed to parse jump_xyz command: {action_name}")
+                    self.logger.error(f"Failed to parse jump command: {action_name}")
                     return False
 
             else:
@@ -281,18 +291,18 @@ class DroneAction:
             return int(parts[2])
         return default_angle
 
-    def _parse_xyz_command(self, action_name: str, command_prefix: str) -> list:
+    def _parse_command(self, action_name: str, command_prefix: str) -> list:
         """
-        Parse xyz commands with multiple parameters.
+        Parse commands with multiple parameters.
         
         Examples:
-        - go_xyz_100_50_-20_30 -> [100, 50, -20, 30]
-        - curve_xyz_50_0_20_100_0_40_25 -> [50, 0, 20, 100, 0, 40, 25]
-        - jump_xyz_100_50_20_30_90_1_2 -> [100, 50, 20, 30, 90, 1, 2]
+        - go_100_50_-20_30 -> [100, 50, -20, 30]
+        - curve_50_0_20_100_0_40_25 -> [50, 0, 20, 100, 0, 40, 25]
+        - jump_100_50_20_30_90_1_2 -> [100, 50, 20, 30, 90, 1, 2]
         
         Args:
             action_name: The action name to parse
-            command_prefix: The command prefix to remove (e.g., "go_xyz", "curve_xyz")
+            command_prefix: The command prefix to remove (e.g., "go", "curve")
             
         Returns:
             List of integer parameters, or None if parsing fails
@@ -343,17 +353,17 @@ class DroneAction:
         elif action_name_lower.startswith("rotate_"):
             return 3.0  # Rotation actions
         elif action_name_lower.startswith("flip_"):
-            return 3.0  # Flip actions
+            return 4.0  # Flip actions
         elif action_name_lower == "hover":
-            return 3.0  # Hover action
-        elif action_name_lower.startswith("go_xyz"):
-            return 4.0  # XYZ movement actions take longer
-        elif action_name_lower.startswith("curve_xyz"):
-            return 5.0  # Curve movements take longer
-        elif action_name_lower.startswith("jump_xyz"):
-            return 4.0  # Jump actions
+            return 4.0  # Hover action
+        elif action_name_lower.startswith("go"):
+            return 3.0  # XYZ movement actions take longer
+        elif action_name_lower.startswith("curve"):
+            return 7.0  # Curve movements take longer
+        elif action_name_lower.startswith("jump"):
+            return 5.0  # Jump actions
         else:
-            return 3.0  # Default for unknown actions
+            return 5.0  # Default for unknown actions
 
     def emergency_stop(self):
         """Emergency stop the drone."""

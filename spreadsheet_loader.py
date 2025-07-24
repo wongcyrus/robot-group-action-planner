@@ -74,7 +74,7 @@ class SpreadsheetLoader:
         return self._load_csv_data(f, columns)
 
     def _load_action_details(self) -> List[Dict[str, str]]:
-        f = self._fetch_spreadsheet_data(self.action_details_spreadsheet_id)
+        f = self._fetch_spreadsheet_data(self.action_details_spreadsheet_id,"Robot")
         if not f:
             print("Failed to fetch action details spreadsheet data.")
             return []
