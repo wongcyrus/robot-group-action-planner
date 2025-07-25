@@ -10,6 +10,9 @@ from constant import ACTION_DETAILS_SPREADSHEET_ID, ACTION_SEQUENCE_SPREADSHEET_
 class SpreadsheetLoader:
     """Class for loading and parsing Google Spreadsheet data."""
 
+    # Class-level cache for action details data - shared across all instances
+    _action_details_cache: Optional[List[Dict[str, str]]] = None
+
     def __init__(
         self,
         dance: str,
@@ -74,12 +77,29 @@ class SpreadsheetLoader:
         return self._load_csv_data(f, columns)
 
     def _load_action_details(self) -> List[Dict[str, str]]:
-        f = self._fetch_spreadsheet_data(self.action_details_spreadsheet_id,"Robot")
+        # Check if we have cached data
+        if SpreadsheetLoader._action_details_cache is not None:
+            print("Using cached action details data.")
+            return SpreadsheetLoader._action_details_cache
+
+        # Fetch data if not cached
+        f = self._fetch_spreadsheet_data(self.action_details_spreadsheet_id, "Robot")
         if not f:
             print("Failed to fetch action details spreadsheet data.")
             return []
         columns = ["Code", "Name", "Time", "Repeat_Time", "Remark", "Link"]
-        return self._load_csv_data(f, columns)
+        data = self._load_csv_data(f, columns)
+
+        # Cache the data for future use
+        SpreadsheetLoader._action_details_cache = data
+        print("Action details data cached.")
+        return data
+
+    @classmethod
+    def clear_action_details_cache(cls) -> None:
+        """Clear the cached action details data."""
+        cls._action_details_cache = None
+        print("Action details cache cleared.")
 
     def get_action_details(self):
         return self.action_details_data
