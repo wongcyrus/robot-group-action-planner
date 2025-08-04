@@ -9,6 +9,8 @@ import requests
 from action import RobotAction
 from action_compiler import ActionCompiler
 from constant import (
+    DOG_IPS,
+    DOG_PORTS,
     DRONE_REAL_HOSTS,
     DRONE_SIMULATOR,
     DRONE_SIMULATOR_IP,
@@ -16,10 +18,13 @@ from constant import (
     ROBOT_IPS,
     SESSION_KEY,
     SIMULATOR_BASE_URL,
+    SKIP_DOGS,
     SKIP_DRONES,
     SONG_BASE_URL,
 )
 from djitellopy import Tello
+from dog.action_executor import DogActionExecutor
+from dog_action import DogAction
 from drone_action import DroneAction
 from song_player import play_song, stop_song
 from spreadsheet_loader import SpreadsheetLoader
@@ -55,15 +60,17 @@ def initialize_drones(
     action_name_to_time: Dict, action_name_to_repeat_time: Dict
 ) -> Dict[int, DroneAction]:
     """Initialize all drones and return them as a dictionary."""
-    
+
     drones = {}
     tello_instances = []
-    
+
     if DRONE_SIMULATOR:
         # For simulator, use the predefined ports (limited to 2 drones)
         simulator_drones = ["drone1", "drone2"]
         for i, drone_key in enumerate(simulator_drones):
-            if i >= len(DRONE_REAL_HOSTS):  # Don't exceed the number of configured hosts
+            if i >= len(
+                DRONE_REAL_HOSTS
+            ):  # Don't exceed the number of configured hosts
                 break
             tello = Tello(
                 host=DRONE_SIMULATOR_IP,
@@ -76,13 +83,13 @@ def initialize_drones(
         for host in DRONE_REAL_HOSTS:
             tello = Tello(host=host)
             tello_instances.append(tello)
-    
+
     # Connect all drones
     for i, tello in enumerate(tello_instances):
         try:
             tello.connect()
             logger.info(f"Drone {i+1} connected successfully")
-        except Exception as e:
+        except (ConnectionError, OSError, ValueError) as e:
             logger.error(f"Failed to connect to drone {i+1}: {e}")
             continue
 
@@ -101,13 +108,43 @@ def initialize_drones(
     return drones
 
 
+def initialize_dogs(
+    action_name_to_time: Dict, action_name_to_repeat_time: Dict
+) -> Dict[int, DogAction]:
+    """Initialize all dog robots and return them as a dictionary."""
+    dogs = {}
+
+    for idx, (ip_address, port) in enumerate(zip(DOG_IPS, DOG_PORTS)):
+        dog_id = idx + 1
+        try:
+            # Create DogActionExecutor instance
+            dog_executor = DogActionExecutor(
+                robot_name=f"dog_{dog_id}", robot_ip=ip_address, robot_port=port
+            )
+
+            # Create DogAction wrapper
+            dog_action = DogAction(
+                dog_executor,
+                action_name_to_time,
+                action_name_to_repeat_time,
+                f"dog_{dog_id}",
+            )
+            dogs[dog_id] = dog_action
+            logger.info(f"Dog {dog_id} initialized at {ip_address}:{port}")
+        except (ConnectionError, OSError, ValueError) as e:
+            logger.error(f"Failed to initialize Dog {dog_id}: {e}")
+
+    return dogs
+
+
 def execute_robot_actions(
     robots: Dict[int, RobotAction],
     drones: Dict[int, DroneAction],
+    dogs: Dict[int, DogAction],
     row: Dict[str, str],
     stop_event: threading.Event,
 ) -> None:
-    """Execute robot and drone actions from a row of spreadsheet data."""
+    """Execute robot, drone, and dog actions from a row of spreadsheet data."""
     try:
         time_value = row["Time"]
         logger.info(f"Executing actions with time value: {time_value}")
@@ -128,7 +165,6 @@ def execute_robot_actions(
         # Process drone actions
         if not drones:
             logger.info("No drones initialized, skipping drone actions.")
-            # You can return here if you want to skip the rest, or just continue
         else:
             for drone_id, drone in drones.items():
                 action_key = f"Drone_{drone_id}"
@@ -138,6 +174,21 @@ def execute_robot_actions(
                     logger.info(f"Drone {drone_id} will perform: {action}")
                     t = threading.Thread(
                         target=drone.run_action, args=(action, stop_event)
+                    )
+                    threads.append(t)
+
+        # Process dog actions
+        if not dogs:
+            logger.info("No dogs initialized, skipping dog actions.")
+        else:
+            for dog_id, dog in dogs.items():
+                action_key = f"Dog_{dog_id}"
+                action = row.get(action_key)
+
+                if action:
+                    logger.info(f"Dog {dog_id} will perform: {action}")
+                    t = threading.Thread(
+                        target=dog.run_action, args=(action, stop_event)
                     )
                     threads.append(t)
 
@@ -153,10 +204,10 @@ def execute_robot_actions(
                 if stop_event.is_set():
                     logger.info("Stop event set, breaking join loop.")
                     break
-        logger.info("All robot and drone actions completed successfully.")
+        logger.info("All robot, drone, and dog actions completed successfully.")
 
     except (KeyError, ValueError, TypeError) as e:
-        logger.error(f"Error executing robot and drone actions: {e}")
+        logger.error(f"Error executing robot, drone, and dog actions: {e}")
     except KeyboardInterrupt:
         logger.info("Execution interrupted by user (Ctrl+C)")
         stop_event.set()
@@ -176,10 +227,16 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
     action_name_to_time = spreadsheet_loader.get_action_name_to_time()
     action_name_to_repeat_time = spreadsheet_loader.get_action_name_to_repeat_time()
     robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
+
     if SKIP_DRONES:
-        drones = []
+        drones = {}
     else:
         drones = initialize_drones(action_name_to_time, action_name_to_repeat_time)
+
+    if SKIP_DOGS:
+        dogs = {}
+    else:
+        dogs = initialize_dogs(action_name_to_time, action_name_to_repeat_time)
 
     if SIMULATOR_BASE_URL is None:
         # Play the song before starting robot actions
@@ -191,7 +248,7 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
     for row in robot_actions:
         logger.info(f"Processing row: {row}")
         try:
-            execute_robot_actions(robots, drones, row, stop_event)
+            execute_robot_actions(robots, drones, dogs, row, stop_event)
             if stop_event.is_set():
                 logger.info("Stop event detected in main loop. Exiting...")
                 return
