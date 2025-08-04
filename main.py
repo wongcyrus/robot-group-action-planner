@@ -20,6 +20,7 @@ from constant import (
     SIMULATOR_BASE_URL,
     SKIP_DOGS,
     SKIP_DRONES,
+    SKIP_ROBOTS,
     SONG_BASE_URL,
 )
 from djitellopy import Tello
@@ -28,6 +29,7 @@ from dog_action import DogAction
 from drone_action import DroneAction
 from song_player import play_song, stop_song
 from spreadsheet_loader import SpreadsheetLoader
+import csv
 
 # Configure logging
 logging.basicConfig(
@@ -41,6 +43,11 @@ def initialize_robots(
 ) -> Dict[int, RobotAction]:
     """Initialize all robot connections and return them as a dictionary."""
     robots = {}
+
+    if SKIP_ROBOTS:
+        logger.info("Skipping robot initialization (SKIP_ROBOTS=True)")
+        return robots
+
     for idx, ip_address in enumerate(ROBOT_IPS):
         robot_id = idx + 1
         try:
@@ -159,7 +166,8 @@ def execute_robot_actions(
 
             if action:
                 logger.info(f"Robot {robot_id} will perform: {action}")
-                t = threading.Thread(target=robot.run_action, args=(action, stop_event))
+                t = threading.Thread(
+                    target=robot.run_action, args=(action, stop_event))
                 threads.append(t)
 
         # Process drone actions
@@ -224,6 +232,14 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
     spreadsheet_loader = SpreadsheetLoader(song)
     action_compiler = ActionCompiler(spreadsheet_loader)
     robot_actions = action_compiler.compile_actions()
+    # Save robot_actions to CSV for debugging/inspection
+    csv_file = f"log/{song}_actions.csv"
+    if robot_actions:
+        with open(csv_file, "w", newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=robot_actions[0].keys())
+            writer.writeheader()
+            writer.writerows(robot_actions)
+        logger.info(f"Robot actions saved to {csv_file}")
     action_name_to_time = spreadsheet_loader.get_action_name_to_time()
     action_name_to_repeat_time = spreadsheet_loader.get_action_name_to_repeat_time()
     robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
@@ -231,7 +247,8 @@ def process_song(song_file_path: str, song: str, stop_event: threading.Event):
     if SKIP_DRONES:
         drones = {}
     else:
-        drones = initialize_drones(action_name_to_time, action_name_to_repeat_time)
+        drones = initialize_drones(
+            action_name_to_time, action_name_to_repeat_time)
 
     if SKIP_DOGS:
         dogs = {}
@@ -269,7 +286,8 @@ def play_song_in_simulator(song):
             timeout=3,
         )
         if response.status_code == 200:
-            logger.info(f"Simulator video source changed successfully for {song}.")
+            logger.info(
+                f"Simulator video source changed successfully for {song}.")
         else:
             logger.warning(
                 f"Failed to change simulator video source: {response.status_code} {response.text}"

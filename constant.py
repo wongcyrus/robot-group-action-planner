@@ -31,5 +31,6 @@ SIMULATOR_BASE_URL = "https://iyfjqmah49.us-east-1.awsapprunner.com"
 SESSION_KEY = "hkiitshow"
 SONG_BASE_URL = "https://cdkstack-robotsimulatorconstructrobotsimulatorwebs-fxuvfxmglhc4.s3.us-east-1.amazonaws.com"
 
-SKIP_DRONES = False  # Set to True to skip drone initialization
+SKIP_DRONES = True  # Set to True to skip drone initialization
 SKIP_DOGS = False  # Set to True to skip dog initialization
+SKIP_ROBOTS = True  # Set to True to skip robot initialization

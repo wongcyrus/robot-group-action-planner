@@ -13,7 +13,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from config import DEFAULT_ROBOT_IP, DEFAULT_ROBOT_PORT
+from ..config import DEFAULT_ROBOT_IP, DEFAULT_ROBOT_PORT
 from .movement_commands import MovementCommands
 from .robot_status import RobotStatus
 from .UDPComms import Publisher

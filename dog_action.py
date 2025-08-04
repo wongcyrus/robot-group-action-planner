@@ -127,22 +127,22 @@ class DogAction:
             parameters = self._extract_parameters(action_name_lower) or {}
 
             if action_name_lower == "activate":
-                self.dog_executor.queue_action("activate", parameters)
+                self.dog_executor.add_action_to_queue("activate", parameters)
                 self.logger.info(f"Dog {self.dog_id}: Activate executed")
 
             elif action_name_lower == "stand_up":
-                self.dog_executor.queue_action("stand_up", parameters)
+                self.dog_executor.add_action_to_queue("stand_up", parameters)
                 self.logger.info(f"Dog {self.dog_id}: Stand up executed")
 
             elif action_name_lower == "lay_down":
-                self.dog_executor.queue_action("lay_down", parameters)
+                self.dog_executor.add_action_to_queue("lay_down", parameters)
                 self.logger.info(f"Dog {self.dog_id}: Lay down executed")
 
             elif action_name_lower.startswith("forward"):
                 distance = self._extract_distance(action_name_lower, 50)
                 speed = self._extract_speed(action_name_lower, 0.5)
                 params = {"distance": distance, "speed": speed}
-                self.dog_executor.queue_action("forward", params)
+                self.dog_executor.add_action_to_queue("forward", params)
                 self.logger.info(
                     f"Dog {self.dog_id}: Move forward {distance} units at speed {speed} executed"
                 )
@@ -151,7 +151,7 @@ class DogAction:
                 distance = self._extract_distance(action_name_lower, 50)
                 speed = self._extract_speed(action_name_lower, 0.5)
                 params = {"distance": distance, "speed": speed}
-                self.dog_executor.queue_action("back", params)
+                self.dog_executor.add_action_to_queue("back", params)
                 self.logger.info(
                     f"Dog {self.dog_id}: Move back {distance} units at speed {speed} executed"
                 )
@@ -160,7 +160,7 @@ class DogAction:
                 distance = self._extract_distance(action_name_lower, 50)
                 speed = self._extract_speed(action_name_lower, 0.5)
                 params = {"distance": distance, "speed": speed}
-                self.dog_executor.queue_action("left", params)
+                self.dog_executor.add_action_to_queue("left", params)
                 self.logger.info(
                     f"Dog {self.dog_id}: Move left {distance} units at speed {speed} executed"
                 )
@@ -169,7 +169,7 @@ class DogAction:
                 distance = self._extract_distance(action_name_lower, 50)
                 speed = self._extract_speed(action_name_lower, 0.5)
                 params = {"distance": distance, "speed": speed}
-                self.dog_executor.queue_action("right", params)
+                self.dog_executor.add_action_to_queue("right", params)
                 self.logger.info(
                     f"Dog {self.dog_id}: Move right {distance} units at speed {speed} executed"
                 )
@@ -180,7 +180,7 @@ class DogAction:
                 angle = self._extract_angle(action_name_lower, 90)
                 speed = self._extract_speed(action_name_lower, 0.5)
                 params = {"angle": angle, "speed": speed}
-                self.dog_executor.queue_action("cw", params)
+                self.dog_executor.add_action_to_queue("cw", params)
                 self.logger.info(
                     f"Dog {self.dog_id}: Rotate clockwise {angle}° at speed {speed} executed"
                 )
@@ -191,7 +191,7 @@ class DogAction:
                 angle = self._extract_angle(action_name_lower, 90)
                 speed = self._extract_speed(action_name_lower, 0.5)
                 params = {"angle": angle, "speed": speed}
-                self.dog_executor.queue_action("ccw", params)
+                self.dog_executor.add_action_to_queue("ccw", params)
                 self.logger.info(
                     f"Dog {self.dog_id}: Rotate counter-clockwise {angle}° at speed {speed} executed"
                 )
@@ -199,27 +199,27 @@ class DogAction:
             elif action_name_lower == "hop":
                 duration = self._extract_duration(action_name_lower, 1.0)
                 params = {"duration": duration}
-                self.dog_executor.queue_action("hop", params)
+                self.dog_executor.add_action_to_queue("hop", params)
                 self.logger.info(f"Dog {self.dog_id}: Hop for {duration}s executed")
 
             elif action_name_lower == "stop":
-                self.dog_executor.queue_action("stop")
+                self.dog_executor.add_action_to_queue("stop")
                 self.logger.info(f"Dog {self.dog_id}: Stop executed")
 
             elif action_name_lower == "deactivate":
-                self.dog_executor.queue_action("deactivate")
+                self.dog_executor.add_action_to_queue("deactivate")
                 self.logger.info(f"Dog {self.dog_id}: Deactivate executed")
 
             elif action_name_lower.startswith("dance"):
                 duration = self._extract_duration(action_name_lower, 3.0)
                 params = {"duration": duration}
-                self.dog_executor.queue_action("dance", params)
+                self.dog_executor.add_action_to_queue("dance", params)
                 self.logger.info(f"Dog {self.dog_id}: Dance for {duration}s executed")
 
             elif action_name_lower.startswith("custom_movement"):
                 # Parse custom movement parameters
                 params = self._parse_custom_movement(action_name_lower)
-                self.dog_executor.queue_action("custom_movement", params)
+                self.dog_executor.add_action_to_queue("custom_movement", params)
                 self.logger.info(f"Dog {self.dog_id}: Custom movement executed")
 
             else:
@@ -351,7 +351,7 @@ class DogAction:
                     "Dog executor not available, simulating emergency stop"
                 )
                 return
-            self.dog_executor.stop_immediate()
+            self.dog_executor.stop()
             self.logger.info(f"Dog {self.dog_id}: Emergency stop executed")
         except (AttributeError, ValueError) as e:
             self.logger.error(f"Error executing emergency stop: {e}")

@@ -11,7 +11,7 @@ import threading
 import time
 from typing import Any, Dict, List, Optional, Callable
 
-from config import (
+from .config import (
     MIN_SPEED, MAX_SPEED, MIN_DURATION, MAX_DURATION,
     CONSUMER_SLEEP_INTERVAL, THREAD_JOIN_TIMEOUT
 )
