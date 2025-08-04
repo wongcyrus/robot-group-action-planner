@@ -14,6 +14,10 @@ ROBOT_IPS = [
     "http://192.168.137.6:9030",
 ]
 
+# Dog robot configuration
+DOG_IPS = ["192.168.137.41", "192.168.137.42"]  # IP addresses for 2 dog robots
+DOG_PORTS = [8830, 8830]  # UDP ports for dog robots (typically same port)
+
 # Drone configuration
 DRONE_SIMULATOR = False
 DRONE_SIMULATOR_IP = "192.168.25.128"
@@ -28,3 +32,4 @@ SESSION_KEY = "hkiitshow"
 SONG_BASE_URL = "https://cdkstack-robotsimulatorconstructrobotsimulatorwebs-fxuvfxmglhc4.s3.us-east-1.amazonaws.com"
 
 SKIP_DRONES = False  # Set to True to skip drone initialization
+SKIP_DOGS = False  # Set to True to skip dog initialization
