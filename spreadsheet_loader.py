@@ -6,6 +6,7 @@ import requests
 
 from constant import ACTION_DETAILS_SPREADSHEET_ID, ACTION_SEQUENCE_SPREADSHEET_ID
 from config.settings import AppConfig
+from cache_manager import cache_manager
 
 
 class SpreadsheetLoader:
@@ -13,6 +14,9 @@ class SpreadsheetLoader:
 
     # Class-level cache for action details data - shared across all instances
     _action_details_cache: Optional[List[Dict[str, str]]] = None
+    
+    # Class-level cache for robot actions data by song name
+    _robot_actions_cache: Dict[str, List[Dict[str, str]]] = {}
 
     def __init__(
         self,
@@ -60,6 +64,23 @@ class SpreadsheetLoader:
         return spreadsheet_data
 
     def _load_robot_actions(self) -> List[Dict[str, str]]:
+        # Create cache key for this song's robot actions
+        cache_key = f"robot_actions_{self.dance}_{self.robot_actions_spreadsheet_id}"
+        
+        # Try to get from file cache first
+        cached_data = cache_manager.get_cache(cache_key)
+        if cached_data is not None:
+            print(f"Using file cached robot actions data for song: {self.dance}")
+            # Also update in-memory cache for consistency
+            SpreadsheetLoader._robot_actions_cache[self.dance] = cached_data
+            return cached_data
+
+        # Check if we have in-memory cached data for this song
+        if self.dance in SpreadsheetLoader._robot_actions_cache:
+            print(f"Using in-memory cached robot actions data for song: {self.dance}")
+            return SpreadsheetLoader._robot_actions_cache[self.dance]
+
+        # Fetch data if not cached
         f = self._fetch_spreadsheet_data(self.robot_actions_spreadsheet_id, self.dance)
         if not f:
             print("Failed to fetch robot actions spreadsheet data.")
@@ -67,7 +88,13 @@ class SpreadsheetLoader:
         
         # Generate columns dynamically based on IP configuration
         columns = self._generate_robot_columns()
-        return self._load_csv_data(f, columns)
+        data = self._load_csv_data(f, columns)
+
+        # Cache the data both in-memory and file
+        SpreadsheetLoader._robot_actions_cache[self.dance] = data
+        cache_manager.set_cache(cache_key, data)
+        print(f"Robot actions data cached (memory + file) for song: {self.dance}")
+        return data
 
     def _generate_robot_columns(self) -> List[str]:
         """Generate robot column names based on IP configuration from settings."""
@@ -90,9 +117,20 @@ class SpreadsheetLoader:
         return columns
 
     def _load_action_details(self) -> List[Dict[str, str]]:
-        # Check if we have cached data
+        # Create cache key for action details
+        cache_key = f"action_details_{self.action_details_spreadsheet_id}"
+        
+        # Try to get from file cache first
+        cached_data = cache_manager.get_cache(cache_key)
+        if cached_data is not None:
+            print("Using file cached action details data.")
+            # Also update in-memory cache for consistency
+            SpreadsheetLoader._action_details_cache = cached_data
+            return cached_data
+
+        # Check if we have in-memory cached data
         if SpreadsheetLoader._action_details_cache is not None:
-            print("Using cached action details data.")
+            print("Using in-memory cached action details data.")
             return SpreadsheetLoader._action_details_cache
 
         # Fetch data if not cached
@@ -103,16 +141,50 @@ class SpreadsheetLoader:
         columns = ["Code", "Name", "Time", "Repeat_Time", "Remark", "Link"]
         data = self._load_csv_data(f, columns)
 
-        # Cache the data for future use
+        # Cache the data both in-memory and file
         SpreadsheetLoader._action_details_cache = data
-        print("Action details data cached.")
+        cache_manager.set_cache(cache_key, data)
+        print("Action details data cached (memory + file).")
         return data
 
     @classmethod
     def clear_action_details_cache(cls) -> None:
         """Clear the cached action details data."""
         cls._action_details_cache = None
-        print("Action details cache cleared.")
+        # Clear file cache
+        cache_key = f"action_details_{ACTION_DETAILS_SPREADSHEET_ID}"
+        cache_manager.clear_cache(cache_key)
+        print("Action details cache cleared (memory + file).")
+
+    @classmethod
+    def clear_robot_actions_cache(cls, song_name: Optional[str] = None) -> None:
+        """
+        Clear the cached robot actions data.
+        
+        Args:
+            song_name: If provided, clears cache only for this song. 
+                      If None, clears all robot actions cache.
+        """
+        if song_name:
+            if song_name in cls._robot_actions_cache:
+                del cls._robot_actions_cache[song_name]
+            # Clear file cache for specific song
+            cache_key = f"robot_actions_{song_name}_{ACTION_SEQUENCE_SPREADSHEET_ID}"
+            cache_manager.clear_cache(cache_key)
+            print(f"Robot actions cache cleared (memory + file) for song: {song_name}")
+        else:
+            cls._robot_actions_cache.clear()
+            # Clear all robot actions file caches - this is more complex
+            # For now, we'll clear all cache files
+            cache_manager.clear_cache()
+            print("All robot actions cache cleared (memory + file).")
+
+    @classmethod
+    def clear_all_caches(cls) -> None:
+        """Clear all cached data."""
+        cls.clear_action_details_cache()
+        cls.clear_robot_actions_cache()
+        print("All caches cleared (memory + file).")
 
     def get_action_details(self):
         return self.action_details_data
