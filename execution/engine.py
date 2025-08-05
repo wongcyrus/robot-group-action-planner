@@ -4,6 +4,7 @@ Execution engine for robot actions.
 
 import logging
 import threading
+import time
 from typing import Any, Dict, List
 
 
@@ -35,8 +36,8 @@ class ExecutionEngine:
 
                 success = self._execute_single_action(robots, action, stop_event)
                 if not success:
-                    self.logger.error(f"Failed to execute action {i+1}")
-                    return False
+                    self.logger.warning(f"Some actions failed in sequence {i+1}, but continuing with next sequence")
+                    # Continue with next action sequence instead of stopping entirely
 
             self.logger.info("All actions executed successfully")
             return True
@@ -56,12 +57,36 @@ class ExecutionEngine:
         results = []
 
         try:
+            # Get the time value from the action (this is critical for scheduling!)
+            time_value = action.get("Time")
+            if time_value:
+                self.logger.info(f"Executing actions with time value: {time_value}")
+            else:
+                self.logger.warning("No time value found in action, using default 1 second")
+                time_value = "1"
+
             # Start action threads for each robot type
             for robot_type, robot_list in robots.items():
-                if robot_type in action:
-                    action_name = action[robot_type]
+                # Map robot_type to the expected column prefix in the action data
+                if robot_type == "robots":
+                    column_prefix = "Humanoid_"
+                elif robot_type == "drones":
+                    column_prefix = "Drone_"
+                elif robot_type == "dogs":
+                    column_prefix = "Dog_"
+                else:
+                    continue  # Skip unknown robot types
+                
+                # Find matching columns for this robot type
+                robot_actions_found = False
+                for robot_index, robot in enumerate(robot_list, 1):
+                    action_key = f"{column_prefix}{robot_index}"
+                    action_name = action.get(action_key)
+                    
+                    if action_name:  # Only process if action is not empty
+                        robot_actions_found = True
+                        self.logger.info(f"{action_key} will perform: {action_name}")
 
-                    for robot in robot_list:
                         if stop_event.is_set():
                             return False
 
@@ -71,13 +96,45 @@ class ExecutionEngine:
                         )
                         threads.append(thread)
                         thread.start()
+                
+                if not robot_actions_found:
+                    self.logger.debug(f"No actions found for robot type: {robot_type}")
 
-            # Wait for all threads to complete
+            # Wait for the specified time duration (this was missing in the refactored version!)
+            self.logger.info(f"Waiting for {time_value} seconds")
+            
+            # Start timing for the minimum duration enforcement
+            start_time = time.time()
+            max_wait_time = float(time_value)
+            
+            # Wait for all threads to complete (original behavior)
             for thread in threads:
-                thread.join()
+                while thread.is_alive():
+                    thread.join(timeout=0.1)
+                    if stop_event.is_set():
+                        self.logger.info("Stop event set, breaking join loop.")
+                        break
+            
+            # Ensure we wait for the full time duration even if threads complete early
+            elapsed_time = time.time() - start_time
+            if elapsed_time < max_wait_time and not stop_event.is_set():
+                remaining_sleep = max_wait_time - elapsed_time
+                self.logger.info(f"Robot actions completed early, waiting additional {remaining_sleep:.2f} seconds to reach planned duration of {time_value}s")
+                time.sleep(remaining_sleep)
+            
+            total_elapsed = time.time() - start_time
+            self.logger.info(f"Action sequence completed in {total_elapsed:.2f}s (planned: {time_value}s)")
 
-            # Check if all actions succeeded
-            return all(results)
+            # Check if all actions succeeded - but don't fail the entire sequence if some robots failed
+            success_count = sum(results) if results else 0
+            total_count = len(results) if results else 0
+            
+            if total_count > 0:
+                self.logger.info(f"Action execution results: {success_count}/{total_count} robots succeeded")
+                return success_count > 0  # Return true if at least one robot succeeded
+            else:
+                self.logger.warning("No robot actions were executed")
+                return True  # Don't fail if no actions were attempted
 
         except Exception as e:
             self.logger.error(f"Error executing single action: {e}")

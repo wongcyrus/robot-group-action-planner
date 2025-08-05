@@ -44,11 +44,10 @@ class DogAction(BaseAction):
         action_time = self.get_action_time(action_name)
         repeat_count = self.get_repeat_count(action_name)
 
+        # If action not found in spreadsheet, use default timing like original version
         if action_time <= 0:
-            self.logger.warning(
-                f"Dog action '{action_name}' not found or has invalid time"
-            )
-            return False
+            action_time = self._get_default_action_time(action_name)
+            self.logger.info(f"Using default timing for dog action '{action_name}': {action_time}s")
 
         self.logger.info(
             f"Executing dog action '{action_name}' for {action_time}s, {repeat_count} times"
@@ -72,6 +71,24 @@ class DogAction(BaseAction):
                 return False
 
         return True
+
+    def _get_default_action_time(self, action_name: str) -> float:
+        """
+        Get default timing for dog actions that aren't in the actions dictionary.
+        """
+        action_name_lower = action_name.lower()
+
+        # Define default timings for different types of dog actions
+        if action_name_lower in ["forward", "back", "left", "right"]:
+            return 3.0  # Basic movement actions
+        elif action_name_lower in ["sit", "stand", "lay_down"]:
+            return 2.0  # Posture actions
+        elif action_name_lower in ["activate", "walk_mode", "dance_mode"]:
+            return 1.0  # Mode changes
+        elif action_name_lower == "stop":
+            return 1.0  # Stop action
+        else:
+            return 3.0  # Default for unknown actions
 
     def _execute_dog_command(self, action_name: str, duration: float) -> bool:
         """Execute specific dog command."""
