@@ -4,6 +4,12 @@ from typing import Any, Dict, List, Union
 from jinja2 import BaseLoader, Environment
 
 from spreadsheet_loader import SpreadsheetLoader
+from constant import (
+    DOG_DEFAULT_ACTION_TIMES,
+    DRONE_DEFAULT_ACTION_TIMES,
+    DOG_PATTERN_FALLBACK_TIMES,
+    DRONE_PATTERN_FALLBACK_TIMES
+)
 
 
 class ActionCompiler:
@@ -37,77 +43,12 @@ class ActionCompiler:
         return [key for key in action if key.startswith(( "Humanoid_", "Drone_", "Dog_"))]
 
     def _get_dog_default_actions(self) -> Dict[str, float]:
-        """Extract default dog action timings from DogAction class."""
-        dog_actions = {
-            # Basic movement actions
-            "forward": 3.0,
-            "back": 3.0,
-            "left": 3.0,
-            "right": 3.0,
-            # Posture actions
-            "sit": 2.0,
-            "stand": 2.0,
-            "lay_down": 2.0,
-            # Mode changes
-            "activate": 1.0,
-            "walk_mode": 1.0,
-            "dance_mode": 1.0,
-            # Stop action
-            "stop": 1.0
-        }
-        return dog_actions
+        """Extract default dog action timings from constants."""
+        return DOG_DEFAULT_ACTION_TIMES.copy()
 
     def _get_drone_default_actions(self) -> Dict[str, float]:
-        """Extract default drone action timings from DroneAction class."""
-        drone_actions = {
-            # Takeoff and landing
-            "takeoff": 3.0,
-            "land": 3.0,
-            # Movement actions (with common parameter variations)
-            "move_up": 3.0,
-            "move_up_20": 3.0,
-            "move_up_50": 3.0,
-            "move_up_100": 3.0,
-            "move_down": 3.0,
-            "move_down_20": 3.0,
-            "move_down_50": 3.0,
-            "move_down_100": 3.0,
-            "move_left": 3.0,
-            "move_left_20": 3.0,
-            "move_left_50": 3.0,
-            "move_left_100": 3.0,
-            "move_right": 3.0,
-            "move_right_20": 3.0,
-            "move_right_50": 3.0,
-            "move_right_100": 3.0,
-            "move_forward": 3.0,
-            "move_forward_20": 3.0,
-            "move_forward_50": 3.0,
-            "move_forward_100": 3.0,
-            "move_back": 3.0,
-            "move_back_20": 3.0,
-            "move_back_50": 3.0,
-            "move_back_100": 3.0,
-            # Rotation actions
-            "rotate_cw": 3.0,
-            "rotate_cw_90": 3.0,
-            "rotate_cw_180": 3.0,
-            "rotate_ccw": 3.0,
-            "rotate_ccw_90": 3.0,
-            "rotate_ccw_180": 3.0,
-            # Flip actions
-            "flip_forward": 4.0,
-            "flip_back": 4.0,
-            "flip_left": 4.0,
-            "flip_right": 4.0,
-            # Special actions
-            "hover": 4.0,
-            # Complex movement actions
-            "curve": 7.0,
-            "go": 3.0,
-            "jump": 5.0
-        }
-        return drone_actions
+        """Extract default drone action timings from constants."""
+        return DRONE_DEFAULT_ACTION_TIMES.copy()
 
     def _get_enhanced_action_name_to_time(self) -> Dict[str, float]:
         """Get enhanced action name to time mapping that includes default dog and drone actions."""
@@ -169,35 +110,12 @@ class ActionCompiler:
                     return action_name_to_time[base_command]
                     
         # Try more specific drone action patterns
-        drone_patterns = {
-            "takeoff": 3.0,
-            "land": 3.0,
-            "hover": 4.0,
-            "curve": 7.0,  # Complex curve movements
-            "go": 3.0,     # XYZ movement actions
-            "jump": 5.0    # Jump actions
-        }
-        
-        for pattern, default_time in drone_patterns.items():
+        for pattern, default_time in DRONE_PATTERN_FALLBACK_TIMES.items():
             if action_lower.startswith(pattern):
                 return default_time
                 
         # Dog action patterns
-        dog_patterns = {
-            "forward": 3.0,
-            "back": 3.0, 
-            "left": 3.0,
-            "right": 3.0,
-            "sit": 2.0,
-            "stand": 2.0,
-            "lay_down": 2.0,
-            "activate": 1.0,
-            "walk_mode": 1.0,
-            "dance_mode": 1.0,
-            "stop": 1.0
-        }
-        
-        for pattern, default_time in dog_patterns.items():
+        for pattern, default_time in DOG_PATTERN_FALLBACK_TIMES.items():
             if action_lower == pattern or action_lower.startswith(pattern):
                 return default_time
         

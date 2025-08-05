@@ -7,6 +7,7 @@ import time
 from typing import Dict, Optional
 
 from actions.base_action import BaseAction
+from constant import DOG_PATTERN_FALLBACK_TIMES
 
 
 class DogAction(BaseAction):
@@ -75,20 +76,21 @@ class DogAction(BaseAction):
     def _get_default_action_time(self, action_name: str) -> float:
         """
         Get default timing for dog actions that aren't in the actions dictionary.
+        Uses centralized constants from constant.py.
         """
         action_name_lower = action_name.lower()
 
-        # Define default timings for different types of dog actions
-        if action_name_lower in ["forward", "back", "left", "right"]:
-            return 3.0  # Basic movement actions
-        elif action_name_lower in ["sit", "stand", "lay_down"]:
-            return 2.0  # Posture actions
-        elif action_name_lower in ["activate", "walk_mode", "dance_mode"]:
-            return 1.0  # Mode changes
-        elif action_name_lower == "stop":
-            return 1.0  # Stop action
-        else:
-            return 3.0  # Default for unknown actions
+        # Check if action exists in our pattern fallback times
+        if action_name_lower in DOG_PATTERN_FALLBACK_TIMES:
+            return DOG_PATTERN_FALLBACK_TIMES[action_name_lower]
+        
+        # Fallback logic for actions that match patterns
+        for pattern, default_time in DOG_PATTERN_FALLBACK_TIMES.items():
+            if action_name_lower == pattern or action_name_lower.startswith(pattern):
+                return default_time
+                
+        # Default for completely unknown actions
+        return 3.0
 
     def _execute_dog_command(self, action_name: str, duration: float) -> bool:
         """Execute specific dog command."""
