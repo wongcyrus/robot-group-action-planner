@@ -4,8 +4,8 @@
 ACTION_SEQUENCE_SPREADSHEET_ID = "1JmjO4Yidu2pLtJxEuu4mYPX14AYmEj0przne75JBg6Y"
 ACTION_DETAILS_SPREADSHEET_ID = "1Bsgc60s3m_-dxhneTedxFlCCYxEp-9Ippu3Yr8dekxo"
 
-# Robot IP addresses
-ROBOT_IPS = [
+# Humanoid robot IP addresses (formerly generic "robots")
+HUMANOID_IPS = [
     "http://192.168.137.7:9030",
     "http://192.168.137.2:9030",
     "http://192.168.137.3:9030",
@@ -33,4 +33,4 @@ SONG_BASE_URL = "https://cdkstack-robotsimulatorconstructrobotsimulatorwebs-fxuv
 
 ENABLE_DRONES = True  # Set to False to disable drone initialization
 ENABLE_DOGS = True  # Set to False to disable dog initialization
-ENABLE_ROBOTS = True  # Set to False to disable robot initialization
+ENABLE_HUMANOIDS = True  # Set to False to disable humanoid robot initialization

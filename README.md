@@ -19,7 +19,8 @@ A tool to control multiple robots using Google Spreadsheets. **This version has 
 │   └── settings.py             # Application settings
 ├── actions/                    # Robot action implementations
 │   ├── base_action.py          # Abstract base class
-│   ├── robot_action.py         # HTTP API robots
+│   ├── humanoid_action.py      # HTTP API humanoid robots
+│   ├── robot_action.py         # Backward compatibility alias
 │   ├── drone_action.py         # DJI Tello drones
 │   └── dog_action.py           # Quadruped robots
 ├── robots/                     # Robot factory and management
@@ -44,9 +45,11 @@ A tool to control multiple robots using Google Spreadsheets. **This version has 
 
 ## Robot Types Supported
 
-- **Standard Robots**: HTTP API-based robots
+- **Humanoid Robots**: HTTP API-based humanoid robots (formerly called "Standard Robots")
 - **Drones**: DJI Tello drones (real or simulator)
 - **Dog Robots**: Quadruped robots with UDP communication
+
+*Note: The term "robot" in this system refers to all three types collectively (humanoids, drones, and dogs)*
 
 ## Getting Started
 
@@ -148,9 +151,9 @@ Success rate: 100.0%
    ```python
    from actions.base_action import BaseAction
    
-   class MyRobotAction(BaseAction):
+   class MyHumanoidAction(BaseAction):
        def _execute_single_action(self, action_name, stop_event=None):
-           # Implement robot-specific logic
+           # Implement humanoid-specific logic
            pass
            
        def cleanup(self):
