@@ -7,6 +7,7 @@ import time
 from typing import Dict, Optional
 
 from actions.base_action import BaseAction
+from constant import DRONE_PATTERN_FALLBACK_TIMES
 
 
 class DroneAction(BaseAction):
@@ -76,29 +77,17 @@ class DroneAction(BaseAction):
     def _get_default_action_time(self, action_name: str) -> float:
         """
         Get default timing for drone actions that aren't in the actions dictionary.
-        Based on original drone_action.py implementation.
+        Uses centralized constants from constant.py.
         """
         action_name_lower = action_name.lower()
 
-        # Define default timings for different types of drone actions
-        if action_name_lower in ["takeoff", "land"]:
-            return 3.0  # Takeoff and landing take a bit longer
-        elif action_name_lower.startswith("move_"):
-            return 3.0  # Movement actions
-        elif action_name_lower.startswith("rotate_"):
-            return 3.0  # Rotation actions
-        elif action_name_lower.startswith("flip_"):
-            return 4.0  # Flip actions
-        elif action_name_lower == "hover":
-            return 4.0  # Hover action
-        elif action_name_lower.startswith("go"):
-            return 3.0  # XYZ movement actions take longer
-        elif action_name_lower.startswith("curve"):
-            return 7.0  # Curve movements take longer
-        elif action_name_lower.startswith("jump"):
-            return 5.0  # Jump actions
-        else:
-            return 5.0  # Default for unknown actions
+        # Check specific drone action patterns from constants
+        for pattern, default_time in DRONE_PATTERN_FALLBACK_TIMES.items():
+            if action_name_lower.startswith(pattern):
+                return default_time
+                
+        # Default for unknown actions
+        return 5.0
 
     def _execute_drone_command(self, action_name: str, duration: float) -> bool:
         """Execute specific drone command."""
