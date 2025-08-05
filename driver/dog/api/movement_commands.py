@@ -13,7 +13,7 @@ from typing import Any, Dict, Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from config import (
+from ..config import (
     BASE_COMMAND_TEMPLATE,
     DEFAULT_MESSAGE_RATE,
     ERROR_MESSAGES,
@@ -220,7 +220,7 @@ class MovementCommands:
             dpady: D-pad Y axis (-1.0 to 1.0)
             duration: Optional duration in seconds
         """
-        from config import clamp_value
+        from ..config import clamp_value
 
         # Clamp all values to valid range
         params = {
