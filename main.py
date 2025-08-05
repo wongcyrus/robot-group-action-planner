@@ -1,314 +1,319 @@
+"""
+Robot Action Planner - Main Entry Point
+Refactored version with improved architecture and error handling.
+"""
+
 import logging
 import os
+import sys
 import threading
 import time
-from typing import Dict
 
-import requests
-
-from action import RobotAction
 from action_compiler import ActionCompiler
-from constant import (
-    DOG_IPS,
-    DOG_PORTS,
-    DRONE_REAL_HOSTS,
-    DRONE_SIMULATOR,
-    DRONE_SIMULATOR_IP,
-    DRONE_SIMULATOR_PORTS,
-    ROBOT_IPS,
-    SESSION_KEY,
-    SIMULATOR_BASE_URL,
-    SKIP_DOGS,
-    SKIP_DRONES,
-    SONG_BASE_URL,
-)
-from djitellopy import Tello
-from dog.action_executor import DogActionExecutor
-from dog_action import DogAction
-from drone_action import DroneAction
-from song_player import play_song, stop_song
+
+# Import modules
+from config.settings import AppConfig
 from spreadsheet_loader import SpreadsheetLoader
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
+class RobotActionPlanner:
+    """Main orchestrator for robot action planning and execution."""
 
-def initialize_robots(
-    action_name_to_time: Dict, action_name_to_repeat_time: Dict
-) -> Dict[int, RobotAction]:
-    """Initialize all robot connections and return them as a dictionary."""
-    robots = {}
-    for idx, ip_address in enumerate(ROBOT_IPS):
-        robot_id = idx + 1
+    def __init__(self, config: AppConfig):
+        """
+        Initialize the robot action planner.
+
+        Args:
+            config: Application configuration
+        """
+        self.config = config
+        self.logger = logging.getLogger("RobotActionPlanner")
+        self.stop_event = threading.Event()
+
+        # Initialize components
+        from execution.engine import ExecutionEngine
+        from media.manager import MediaManager
+        from robots.factory import RobotFactory
+
+        self.robot_factory = RobotFactory(config)
+        self.execution_engine = ExecutionEngine()
+        self.media_manager = MediaManager(config)
+
+        # Statistics tracking
+        self.stats = {
+            "songs_processed": 0,
+            "songs_failed": 0,
+            "total_actions_executed": 0,
+            "robots_initialized": 0,
+        }
+
+    def run(self) -> None:
+        """Run the main application loop."""
+        self.logger.info("Starting Robot Action Planner (Refactored)")
+
         try:
-            robots[robot_id] = RobotAction(
-                ip_address,
-                action_name_to_time,
-                action_name_to_repeat_time,
-                "robot_" + str(robot_id),
-            )
-            logger.info(f"Robot {robot_id} initialized at {ip_address}")
-        except (ConnectionError, OSError, ValueError) as e:
-            logger.error(f"Failed to initialize Robot {robot_id}: {e}")
-    return robots
-
-
-def initialize_drones(
-    action_name_to_time: Dict, action_name_to_repeat_time: Dict
-) -> Dict[int, DroneAction]:
-    """Initialize all drones and return them as a dictionary."""
-
-    drones = {}
-    tello_instances = []
-
-    if DRONE_SIMULATOR:
-        # For simulator, use the predefined ports (limited to 2 drones)
-        simulator_drones = ["drone1", "drone2"]
-        for i, drone_key in enumerate(simulator_drones):
-            if i >= len(
-                DRONE_REAL_HOSTS
-            ):  # Don't exceed the number of configured hosts
-                break
-            tello = Tello(
-                host=DRONE_SIMULATOR_IP,
-                control_udp=DRONE_SIMULATOR_PORTS[drone_key]["control_udp"],
-                state_udp=DRONE_SIMULATOR_PORTS[drone_key]["state_udp"],
-            )
-            tello_instances.append(tello)
-    else:
-        # Real drones - create based on DRONE_REAL_HOSTS length
-        for host in DRONE_REAL_HOSTS:
-            tello = Tello(host=host)
-            tello_instances.append(tello)
-
-    # Connect all drones
-    for i, tello in enumerate(tello_instances):
-        try:
-            tello.connect()
-            logger.info(f"Drone {i+1} connected successfully")
-        except (ConnectionError, OSError, ValueError) as e:
-            logger.error(f"Failed to connect to drone {i+1}: {e}")
-            continue
-
-    # Create DroneAction instances
-    for i, tello in enumerate(tello_instances):
-        drone_id = i + 1
-        drone_action = DroneAction(
-            tello,
-            action_name_to_time,
-            action_name_to_repeat_time,
-            f"drone_{drone_id}",
-        )
-        drones[drone_id] = drone_action
-        logger.info(f"Drone {drone_id} initialized")
-
-    return drones
-
-
-def initialize_dogs(
-    action_name_to_time: Dict, action_name_to_repeat_time: Dict
-) -> Dict[int, DogAction]:
-    """Initialize all dog robots and return them as a dictionary."""
-    dogs = {}
-
-    for idx, (ip_address, port) in enumerate(zip(DOG_IPS, DOG_PORTS)):
-        dog_id = idx + 1
-        try:
-            # Create DogActionExecutor instance
-            dog_executor = DogActionExecutor(
-                robot_name=f"dog_{dog_id}", robot_ip=ip_address, robot_port=port
-            )
-
-            # Create DogAction wrapper
-            dog_action = DogAction(
-                dog_executor,
-                action_name_to_time,
-                action_name_to_repeat_time,
-                f"dog_{dog_id}",
-            )
-            dogs[dog_id] = dog_action
-            logger.info(f"Dog {dog_id} initialized at {ip_address}:{port}")
-        except (ConnectionError, OSError, ValueError) as e:
-            logger.error(f"Failed to initialize Dog {dog_id}: {e}")
-
-    return dogs
-
-
-def execute_robot_actions(
-    robots: Dict[int, RobotAction],
-    drones: Dict[int, DroneAction],
-    dogs: Dict[int, DogAction],
-    row: Dict[str, str],
-    stop_event: threading.Event,
-) -> None:
-    """Execute robot, drone, and dog actions from a row of spreadsheet data."""
-    try:
-        time_value = row["Time"]
-        logger.info(f"Executing actions with time value: {time_value}")
-
-        # Create threads for all robots with actions
-        threads = []
-
-        # Process robot actions
-        for robot_id, robot in robots.items():
-            action_key = f"Robot_{robot_id}"
-            action = row.get(action_key)
-
-            if action:
-                logger.info(f"Robot {robot_id} will perform: {action}")
-                t = threading.Thread(target=robot.run_action, args=(action, stop_event))
-                threads.append(t)
-
-        # Process drone actions
-        if not drones:
-            logger.info("No drones initialized, skipping drone actions.")
-        else:
-            for drone_id, drone in drones.items():
-                action_key = f"Drone_{drone_id}"
-                action = row.get(action_key)
-
-                if action:
-                    logger.info(f"Drone {drone_id} will perform: {action}")
-                    t = threading.Thread(
-                        target=drone.run_action, args=(action, stop_event)
-                    )
-                    threads.append(t)
-
-        # Process dog actions
-        if not dogs:
-            logger.info("No dogs initialized, skipping dog actions.")
-        else:
-            for dog_id, dog in dogs.items():
-                action_key = f"Dog_{dog_id}"
-                action = row.get(action_key)
-
-                if action:
-                    logger.info(f"Dog {dog_id} will perform: {action}")
-                    t = threading.Thread(
-                        target=dog.run_action, args=(action, stop_event)
-                    )
-                    threads.append(t)
-
-        # Start all threads
-        for thread in threads:
-            thread.start()
-
-        logger.info(f"Waiting for {time_value} seconds")
-        # Wait for all threads to complete
-        for thread in threads:
-            while thread.is_alive():
-                thread.join(timeout=0.1)
-                if stop_event.is_set():
-                    logger.info("Stop event set, breaking join loop.")
-                    break
-        logger.info("All robot, drone, and dog actions completed successfully.")
-
-    except (KeyError, ValueError, TypeError) as e:
-        logger.error(f"Error executing robot, drone, and dog actions: {e}")
-    except KeyboardInterrupt:
-        logger.info("Execution interrupted by user (Ctrl+C)")
-        stop_event.set()
-        raise
-
-
-def get_song_files(song_folder: str):
-    """Return a list of .mp4 song files in the given folder."""
-    return [f for f in os.listdir(song_folder) if f.lower().endswith(".mp4")]
-
-
-def process_song(song_file_path: str, song: str, stop_event: threading.Event):
-    """Process a single song: load spreadsheet, compile actions, and coordinate robots."""
-    spreadsheet_loader = SpreadsheetLoader(song)
-    action_compiler = ActionCompiler(spreadsheet_loader)
-    robot_actions = action_compiler.compile_actions()
-    action_name_to_time = spreadsheet_loader.get_action_name_to_time()
-    action_name_to_repeat_time = spreadsheet_loader.get_action_name_to_repeat_time()
-    robots = initialize_robots(action_name_to_time, action_name_to_repeat_time)
-
-    if SKIP_DRONES:
-        drones = {}
-    else:
-        drones = initialize_drones(action_name_to_time, action_name_to_repeat_time)
-
-    if SKIP_DOGS:
-        dogs = {}
-    else:
-        dogs = initialize_dogs(action_name_to_time, action_name_to_repeat_time)
-
-    if SIMULATOR_BASE_URL is None:
-        # Play the song before starting robot actions
-        play_song(song_file_path)
-    # Notify the simulator to change the video source before starting robot actions
-    else:
-        play_song_in_simulator(song)
-
-    for row in robot_actions:
-        logger.info(f"Processing row: {row}")
-        try:
-            execute_robot_actions(robots, drones, dogs, row, stop_event)
-            if stop_event.is_set():
-                logger.info("Stop event detected in main loop. Exiting...")
+            # Validate configuration
+            if not self._validate_configuration():
+                self.logger.error("Configuration validation failed")
                 return
+
+            # Find song files
+            song_folder = self._get_song_folder()
+            song_files = self.media_manager.get_song_files(song_folder)
+
+            if not song_files:
+                self.logger.error(f"No .mp4 files found in {song_folder}")
+                return
+
+            self.logger.info(f"Found {len(song_files)} song files to process")
+
+            # Process each song
+            for song_file in song_files:
+                if self.stop_event.is_set():
+                    self.logger.info("Stop event detected, exiting main loop")
+                    break
+
+                song_name = os.path.splitext(song_file)[0]
+                song_file_path = os.path.join(song_folder, song_file)
+
+                self.logger.info(f"Processing song: {song_name}")
+                success = self._process_single_song(song_file_path, song_name)
+
+                if success:
+                    self.stats["songs_processed"] += 1
+                    self.logger.info(f"Successfully processed song: {song_name}")
+                else:
+                    self.stats["songs_failed"] += 1
+                    self.logger.error(f"Failed to process song: {song_name}")
+
+                # Small delay between songs if not the last one
+                if song_file != song_files[-1] and not self.stop_event.is_set():
+                    self.logger.info("Waiting 3 seconds before next song...")
+                    time.sleep(3)
+
         except KeyboardInterrupt:
-            logger.info("Main loop interrupted by user (Ctrl+C). Exiting...")
-            stop_event.set()
-            return
-    if SIMULATOR_BASE_URL is None:
-        stop_song()
-
-
-def play_song_in_simulator(song):
-    try:
-        response = requests.post(
-            f"{SIMULATOR_BASE_URL}/api/video/change_source?session_key={SESSION_KEY}",
-            headers={"Content-Type": "application/json"},
-            json={"video_src": f"{SONG_BASE_URL}/{song}.mp4"},
-            timeout=3,
-        )
-        if response.status_code == 200:
-            logger.info(f"Simulator video source changed successfully for {song}.")
-        else:
-            logger.warning(
-                f"Failed to change simulator video source: {response.status_code} {response.text}"
+            self.logger.info("Application interrupted by user (Ctrl+C)")
+            self.stop_event.set()
+        except Exception as e:
+            self.logger.error(
+                f"Unexpected error in main application: {e}", exc_info=True
             )
-    except requests.RequestException as e:
-        logger.error(f"Error calling simulator API: {e}")
+        finally:
+            self._cleanup()
+            self._print_statistics()
+
+    def _validate_configuration(self) -> bool:
+        """Validate the application configuration."""
+        try:
+            # Check if at least one robot type is enabled
+            enabled_types = []
+            if self.config.robots.enabled and self.config.robots.ips:
+                enabled_types.append("robots")
+            if self.config.drones.enabled and (
+                self.config.drones.real_hosts or self.config.drones.simulator_mode
+            ):
+                enabled_types.append("drones")
+            if self.config.dogs.enabled and self.config.dogs.ips:
+                enabled_types.append("dogs")
+
+            if not enabled_types:
+                self.logger.error("No robot types are enabled or configured")
+                return False
+
+            self.logger.info(f"Enabled robot types: {', '.join(enabled_types)}")
+
+            # Validate spreadsheet configuration
+            if not self.config.spreadsheet.action_sequence_id:
+                self.logger.error("No action sequence spreadsheet ID configured")
+                return False
+
+            if not self.config.spreadsheet.action_details_id:
+                self.logger.error("No action details spreadsheet ID configured")
+                return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error validating configuration: {e}")
+            return False
+
+    def _get_song_folder(self) -> str:
+        """Get the song folder path."""
+        song_folder = os.path.join(os.path.dirname(__file__), "song")
+        return os.path.abspath(song_folder)
+
+    def _process_single_song(self, song_file_path: str, song_name: str) -> bool:
+        """
+        Process a single song: load actions, initialize robots, and execute.
+
+        Args:
+            song_file_path: Full path to the song file
+            song_name: Song name without extension
+
+        Returns:
+            True if processing was successful, False otherwise
+        """
+        robots = {}
+        try:
+            # Load and compile actions
+            self.logger.info(f"Loading spreadsheet data for song: {song_name}")
+            spreadsheet_loader = SpreadsheetLoader(song_name)
+            action_compiler = ActionCompiler(spreadsheet_loader)
+            robot_actions = action_compiler.compile_actions()
+
+            if not robot_actions:
+                self.logger.warning(f"No robot actions found for song: {song_name}")
+                return False
+
+            action_name_to_time = spreadsheet_loader.get_action_name_to_time()
+            action_name_to_repeat_time = (
+                spreadsheet_loader.get_action_name_to_repeat_time()
+            )
+
+            self.logger.info(f"Loaded {len(robot_actions)} action sequences")
+            self.logger.info(f"Loaded {len(action_name_to_time)} action definitions")
+
+            # Initialize robots
+            self.logger.info("Initializing robots...")
+            robots = self.robot_factory.create_all_robots(
+                action_name_to_time, action_name_to_repeat_time
+            )
+
+            if not robots:
+                self.logger.error("No robots were initialized successfully")
+                return False
+
+            # Count total robots
+            total_robots = sum(len(robot_list) for robot_list in robots.values())
+            self.stats["robots_initialized"] = total_robots
+            self.logger.info(f"Successfully initialized {total_robots} robots")
+
+            # Start media playback
+            self.logger.info(f"Starting media for song: {song_name}")
+            media_success = self.media_manager.start_media_for_song(
+                song_file_path, song_name
+            )
+            if not media_success:
+                self.logger.warning(
+                    f"Failed to start media for {song_name}, continuing anyway"
+                )
+
+            # Execute actions
+            self.logger.info(f"Executing {len(robot_actions)} action sequences...")
+            execution_success = self.execution_engine.execute_action_sequence(
+                robots, robot_actions, self.stop_event
+            )
+
+            self.stats["total_actions_executed"] += len(robot_actions)
+
+            # Stop media
+            self.media_manager.stop_media()
+
+            return execution_success
+
+        except Exception as e:
+            self.logger.error(f"Error processing song {song_name}: {e}", exc_info=True)
+            return False
+        finally:
+            # Always cleanup robots
+            if robots:
+                self.logger.info("Cleaning up robots...")
+                self.execution_engine.cleanup_all_robots(robots)
+
+    def _cleanup(self) -> None:
+        """Perform application cleanup."""
+        self.logger.info("Performing application cleanup")
+        try:
+            # Stop any remaining media
+            self.media_manager.stop_media()
+
+            # Set stop event to ensure all threads stop
+            self.stop_event.set()
+
+            # Give threads a moment to cleanup
+            time.sleep(0.5)
+
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {e}")
+
+    def _print_statistics(self) -> None:
+        """Print execution statistics."""
+        self.logger.info("=" * 50)
+        self.logger.info("EXECUTION STATISTICS")
+        self.logger.info("=" * 50)
+        self.logger.info(
+            f"Songs processed successfully: {self.stats['songs_processed']}"
+        )
+        self.logger.info(f"Songs failed: {self.stats['songs_failed']}")
+        self.logger.info(
+            f"Total action sequences executed: {self.stats['total_actions_executed']}"
+        )
+        self.logger.info(f"Robots initialized: {self.stats['robots_initialized']}")
+
+        total_songs = self.stats["songs_processed"] + self.stats["songs_failed"]
+        if total_songs > 0:
+            success_rate = (self.stats["songs_processed"] / total_songs) * 100
+            self.logger.info(f"Success rate: {success_rate:.1f}%")
+
+        self.logger.info("=" * 50)
+
+    def shutdown(self) -> None:
+        """Gracefully shutdown the application."""
+        self.logger.info("Shutting down robot action planner")
+        self.stop_event.set()
+
+
+def setup_logging(log_level: str = "INFO") -> None:
+    """Setup application logging."""
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join(os.path.dirname(__file__), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Configure logging
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+    # File handler
+    log_file = os.path.join(log_dir, "robot_planner.log")
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(logging.Formatter(log_format))
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(getattr(logging, log_level.upper()))
+    console_handler.setFormatter(logging.Formatter(log_format))
+
+    # Root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
 
 
 def main() -> None:
-    """Main function to load spreadsheet and coordinate robot actions."""
-    song_folder = os.path.join(os.path.dirname(__file__), "song")
-    stop_event = threading.Event()
+    """Main entry point for the application."""
     try:
-        # Load the spreadsheet data
-        song_files = get_song_files(song_folder)
-        if not song_files:
-            logger.error(f"No .mp4 files found in {song_folder}")
-            return
+        # Setup logging
+        setup_logging()
 
-        for song_file in song_files:
-            if stop_event.is_set():
-                logger.info(
-                    "Stop event detected before playing next song. Exiting loop."
-                )
-                break
+        logger = logging.getLogger("Main")
+        logger.info("Starting Robot Action Planner (Refactored)")
+        logger.info(f"Working directory: {os.getcwd()}")
 
-            song = os.path.splitext(song_file)[0]
-            song_file_path = os.path.join(song_folder, song_file)
+        # Load configuration
+        logger.info("Loading configuration...")
+        config = AppConfig.from_constants()
 
-            logger.info(f"Current song: {song_file_path}")
-            process_song(song_file_path, song, stop_event)
-            time.sleep(3)
+        # Create and run the application
+        planner = RobotActionPlanner(config)
+        planner.run()
 
-    except (KeyError, ValueError, TypeError) as e:
-        logger.error(f"An error occurred in the main program: {e}")
-    except KeyboardInterrupt:
-        logger.info("Program interrupted by user (Ctrl+C). Exiting...")
-        stop_event.set()
-        return
+        logger.info("Robot Action Planner completed successfully")
+
+    except Exception as e:
+        logger = logging.getLogger("Main")
+        logger.error(f"Fatal error in main application: {e}", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
