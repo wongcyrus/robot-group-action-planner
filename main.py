@@ -273,6 +273,10 @@ class RobotActionPlanner:
                     f"Failed to start media for {song_name}, continuing anyway"
                 )
 
+            # Add delay to allow song to load properly
+            self.logger.info("Waiting 1 seconds for song to load...")
+            time.sleep(1)
+
             # Execute actions (the song will continue playing through all sequences)
             self.logger.info(f"Executing {len(robot_actions)} action sequences...")
             execution_success = self.execution_engine.execute_action_sequence(
