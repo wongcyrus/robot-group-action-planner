@@ -34,7 +34,7 @@ class ExecutionEngine:
                     f"Executing action {i+1}/{len(robot_actions)}: {action}"
                 )
 
-                success = self._execute_single_action(robots, action, stop_event)
+                success = self._execute_single_step(robots, action, stop_event)
                 if not success:
                     self.logger.warning(f"Some actions failed in sequence {i+1}, but continuing with next sequence")
                     # Continue with next action sequence instead of stopping entirely
@@ -46,7 +46,7 @@ class ExecutionEngine:
             self.logger.error(f"Error in action execution: {e}")
             return False
 
-    def _execute_single_action(
+    def _execute_single_step(
         self,
         robots: Dict[str, List[Any]],
         action: Dict[str, Any],

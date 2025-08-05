@@ -44,6 +44,15 @@ class FileCacheManager:
         # Create a safe filename from the cache key
         safe_key = hashlib.md5(cache_key.encode()).hexdigest()
         return os.path.join(self.cache_dir, f"{safe_key}.json")
+    
+    def _get_cache_key_file_path(self, cache_key: str) -> str:
+        """Get the full path for a cache file using the original cache key as filename."""
+        # Create a safe filename from the cache key by replacing invalid characters
+        safe_cache_key = "".join(c for c in cache_key if c.isalnum() or c in "._-").rstrip()
+        # Truncate if too long (Windows has 255 char limit)
+        if len(safe_cache_key) > 200:
+            safe_cache_key = safe_cache_key[:200]
+        return os.path.join(self.cache_dir, f"{safe_cache_key}.json")
 
     def _is_cache_valid(self, cache_file_path: str) -> bool:
         """Check if cache file exists and is not expired."""
@@ -113,6 +122,7 @@ class FileCacheManager:
         
         try:
             cache_file_path = self._get_cache_file_path(cache_key)
+            cache_key_file_path = self._get_cache_key_file_path(cache_key)
             
             cache_data = {
                 'cache_key': cache_key,
@@ -120,8 +130,17 @@ class FileCacheManager:
                 'data': data
             }
             
+            # Save with MD5 hash filename (primary)
             with open(cache_file_path, 'w', encoding='utf-8') as f:
                 json.dump(cache_data, f, indent=2, ensure_ascii=False)
+            
+            # Save copy with cache key filename (for human readability)
+            try:
+                with open(cache_key_file_path, 'w', encoding='utf-8') as f:
+                    json.dump(cache_data, f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                # If cache key filename fails, continue with just the MD5 version
+                self.logger.debug(f"Could not save cache key filename copy: {e}")
             
             self.logger.debug(f"Data cached for key: {cache_key}")
             return True
@@ -145,11 +164,21 @@ class FileCacheManager:
         
         try:
             if cache_key:
-                # Clear specific cache
+                # Clear specific cache (both MD5 and cache key versions)
                 cache_file_path = self._get_cache_file_path(cache_key)
+                cache_key_file_path = self._get_cache_key_file_path(cache_key)
+                
+                files_removed = 0
                 if os.path.exists(cache_file_path):
                     os.remove(cache_file_path)
-                    self.logger.info(f"Cache cleared for key: {cache_key}")
+                    files_removed += 1
+                
+                if os.path.exists(cache_key_file_path):
+                    os.remove(cache_key_file_path)
+                    files_removed += 1
+                
+                if files_removed > 0:
+                    self.logger.info(f"Cache cleared for key: {cache_key} ({files_removed} files removed)")
                 return True
             else:
                 # Clear all cache files
