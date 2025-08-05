@@ -5,9 +5,9 @@ Robot factory for creating robot instances.
 import logging
 from typing import Any, Dict, List
 
-from actions.humanoid_action import HumanoidAction
-from actions.dog_action import DogAction
-from actions.drone_action import DroneAction
+from action import HumanoidAction
+from dog_action import DogAction
+from drone_action import DroneAction
 
 
 class RobotFactory:
@@ -74,7 +74,7 @@ class RobotFactory:
                 self.logger.info(f"Created HTTP humanoid: {robot_id} at {api_url}")
 
         except Exception as e:
-            self.logger.error(f"Error creating HTTP humanoids: {e}")
+            self.logger.error(f"Error creating HTTP robots: {e}")
 
         return robots
 

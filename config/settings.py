@@ -7,11 +7,12 @@ from typing import Dict, List, Optional
 
 
 @dataclass
-class RobotConfig:
-    """Configuration for generic robots."""
+class HumanoidConfig:
+    """Configuration for humanoid robots."""
 
     ips: List[str]
     enabled: bool = True
+    port: int = 8080
 
 
 @dataclass
@@ -55,7 +56,7 @@ class SimulatorConfig:
 class AppConfig:
     """Main application configuration."""
 
-    robots: RobotConfig
+    robots: HumanoidConfig  # Note: keeping 'robots' key for backward compatibility
     drones: DroneConfig
     dogs: DogConfig
     spreadsheet: SpreadsheetConfig
@@ -68,7 +69,7 @@ class AppConfig:
         import constant
 
         return cls(
-            robots=RobotConfig(ips=constant.ROBOT_IPS, enabled=constant.ENABLE_ROBOTS),
+            robots=HumanoidConfig(ips=constant.HUMANOID_IPS, enabled=constant.ENABLE_HUMANOIDS),
             drones=DroneConfig(
                 simulator_mode=constant.DRONE_SIMULATOR,
                 simulator_ip=constant.DRONE_SIMULATOR_IP,
