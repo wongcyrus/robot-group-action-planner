@@ -263,7 +263,7 @@ class RobotActionPlanner:
             self.stats["robots_initialized"] = total_robots
             self.logger.info(f"Successfully initialized {total_robots} robots")
 
-            # Start media playback
+            # Start media playback BEFORE action sequence loop (like original)
             self.logger.info(f"Starting media for song: {song_name}")
             media_success = self.media_manager.start_media_for_song(
                 song_file_path, song_name
@@ -273,7 +273,7 @@ class RobotActionPlanner:
                     f"Failed to start media for {song_name}, continuing anyway"
                 )
 
-            # Execute actions
+            # Execute actions (the song will continue playing through all sequences)
             self.logger.info(f"Executing {len(robot_actions)} action sequences...")
             execution_success = self.execution_engine.execute_action_sequence(
                 robots, robot_actions, self.stop_event
@@ -281,7 +281,7 @@ class RobotActionPlanner:
 
             self.stats["total_actions_executed"] += len(robot_actions)
 
-            # Stop media
+            # Stop media AFTER all action sequences complete (like original)
             self.media_manager.stop_media()
 
             return execution_success
