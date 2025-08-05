@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 import requests
 
 from constant import ACTION_DETAILS_SPREADSHEET_ID, ACTION_SEQUENCE_SPREADSHEET_ID
+from config.settings import AppConfig
 
 
 class SpreadsheetLoader:
@@ -63,18 +64,30 @@ class SpreadsheetLoader:
         if not f:
             print("Failed to fetch robot actions spreadsheet data.")
             return []
-        columns = [
-            "Time",
-            "Robot_1",
-            "Robot_2",
-            "Robot_3",
-            "Robot_4",
-            "Robot_5",
-            "Robot_6",
-            "Drone_1",
-            "Drone_2",
-        ]
+        
+        # Generate columns dynamically based on IP configuration
+        columns = self._generate_robot_columns()
         return self._load_csv_data(f, columns)
+
+    def _generate_robot_columns(self) -> List[str]:
+        """Generate robot column names based on IP configuration from settings."""
+        config = AppConfig.from_constants()
+        columns = ["Time"]
+        
+        # Add humanoid columns based on configured IPs
+        for i in range(len(config.robots.ips)):
+            columns.append(f"Humanoid_{i+1}")
+        
+        # Add drone columns based on configured IPs
+        drone_ips = config.drones.real_hosts if not config.drones.simulator_mode else [config.drones.simulator_ip]
+        for i in range(len(drone_ips)):
+            columns.append(f"Drone_{i+1}")
+        
+        # Add dog columns based on configured IPs
+        for i in range(len(config.dogs.ips)):
+            columns.append(f"Dog_{i+1}")
+        
+        return columns
 
     def _load_action_details(self) -> List[Dict[str, str]]:
         # Check if we have cached data
