@@ -1,6 +1,19 @@
 # Robot Group Action Planner
 
-A comprehensive tool to control multiple types of robots simultaneously using Google Spreadsheets for choreographed performances. **This system provides advanced maintainability, modularity, and streamlined complexity management.**
+A comprehensive tool to control multiple types of robots simultaneously using Google### Advanced Features
+- **Comprehensive logging**: Centralized and robot-specific log files
+- **Error handling & recovery**: Graceful failure handling with automatic cleanup
+- **Statistics tracking**: Real-time monitoring and post-execution analytics  
+- **Media synchronization**: Coordinated music playback with robot actions
+- **Configuration management**: Structured, type-safe configuration system
+- **Background processing**: Non-blocking execution with proper threading
+- **File-based caching**: Persistent spreadsheet data caching for improved performance
+
+### Performance Optimization
+- **Dual-layer caching**: Memory and file-based caching for maximum speed
+- **Pre-loading**: All spreadsheet data loaded at startup for faster execution
+- **Cache management**: Automatic cleanup of expired cache files
+- **Performance monitoring**: Built-in cache hit/miss tracking and statisticssheets for choreographed performances. **This system provides advanced maintainability, modularity, and streamlined complexity management.**
 
 ## ✨ Key Features
 
@@ -43,8 +56,18 @@ robot-group-action-planner/
 ├── constant.py                 # Global configuration constants
 ├── action_compiler.py          # Compiles spreadsheet data into actions
 ├── spreadsheet_loader.py       # Google Sheets integration
+├── cache_manager.py            # File-based caching system
 ├── setup_venv.ps1             # Virtual environment setup script
 ├── requirements.txt           # Python dependencies
+│
+├── docs/                      # Documentation
+│   ├── CACHING_OPTIMIZATION.md    # Detailed caching documentation
+│   └── CACHE_QUICK_START.md       # Quick start guide for caching
+│
+├── utils/                     # Utility scripts and tools
+│   ├── __init__.py
+│   ├── cache_utils.py         # Cache management utility
+│   └── test_caching.py        # Caching performance test
 │
 ├── config/                    # Configuration Management
 │   ├── __init__.py
@@ -335,7 +358,47 @@ The application generates detailed logs:
 - **`logs/drone_debug.log`**: Drone-specific flight and control logs
 - **`logs/dog_debug.log`**: Quadruped movement and status logs
 
-## 🔧 Extending the System
+## �️ Utilities and Tools
+
+The system includes several utility tools for development and maintenance:
+
+### Cache Management
+```bash
+# Show cache information and statistics
+python utils/cache_utils.py info
+
+# Clear all cache files
+python utils/cache_utils.py clear
+
+# Remove only expired cache files
+python utils/cache_utils.py cleanup
+
+# Test cache performance
+python utils/cache_utils.py test
+
+# Validate cache file integrity
+python utils/cache_utils.py validate
+```
+
+### Performance Testing
+```bash
+# Test caching performance improvement
+python utils/test_caching.py
+```
+
+### Cache Configuration
+Control caching behavior via `constant.py`:
+```python
+USE_FILE_CACHE = True          # Enable/disable file caching
+CACHE_DIRECTORY = "cache"      # Cache storage directory
+CACHE_EXPIRY_HOURS = 24        # Cache expiration (0 = never expire)
+```
+
+### Documentation
+- **`docs/CACHING_OPTIMIZATION.md`**: Comprehensive caching system documentation
+- **`docs/CACHE_QUICK_START.md`**: Quick start guide for cache management
+
+## �🔧 Extending the System
 
 The modular architecture makes it easy to add new robot types or features.
 

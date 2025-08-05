@@ -34,3 +34,8 @@ SONG_BASE_URL = "https://cdkstack-robotsimulatorconstructrobotsimulatorwebs-fxuv
 ENABLE_DRONES = True  # Set to False to disable drone initialization
 ENABLE_DOGS = True  # Set to False to disable dog initialization
 ENABLE_HUMANOIDS = True  # Set to False to disable humanoid robot initialization
+
+# Cache configuration
+USE_FILE_CACHE = True  # Set to False to disable persistent file caching
+CACHE_DIRECTORY = "cache"  # Directory to store cache files
+CACHE_EXPIRY_HOURS = 24  # Cache expiry time in hours (0 = never expire)

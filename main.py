@@ -14,6 +14,7 @@ from action_compiler import ActionCompiler
 # Import modules
 from config.settings import AppConfig
 from spreadsheet_loader import SpreadsheetLoader
+from cache_manager import cache_manager
 
 
 class RobotActionPlanner:
@@ -47,6 +48,10 @@ class RobotActionPlanner:
             "robots_initialized": 0,
         }
 
+        # Cache for pre-loaded data
+        self.cached_song_data = {}
+        self.cached_action_mappings = None
+
     def run(self) -> None:
         """Run the main application loop."""
         self.logger.info("Starting Robot Action Planner (Refactored)")
@@ -66,6 +71,9 @@ class RobotActionPlanner:
                 return
 
             self.logger.info(f"Found {len(song_files)} song files to process")
+
+            # Pre-load all spreadsheet data for all songs
+            self._preload_all_song_data(song_files)
 
             # Process each song
             for song_file in song_files:
@@ -142,9 +150,73 @@ class RobotActionPlanner:
         song_folder = os.path.join(os.path.dirname(__file__), "song")
         return os.path.abspath(song_folder)
 
+    def _preload_all_song_data(self, song_files: list) -> None:
+        """
+        Pre-load all spreadsheet data for all songs to cache it for faster access.
+        
+        Args:
+            song_files: List of song file names to preload data for
+        """
+        self.logger.info("Pre-loading spreadsheet data for all songs...")
+        start_time = time.time()
+        
+        # Clean up expired cache files
+        cleanup_count = cache_manager.cleanup_expired_cache()
+        if cleanup_count > 0:
+            self.logger.info(f"Cleaned up {cleanup_count} expired cache files")
+        
+        # Extract song names from file names
+        song_names = [os.path.splitext(song_file)[0] for song_file in song_files]
+        
+        # Load action details once (this is already cached in SpreadsheetLoader)
+        self.logger.info("Loading action details...")
+        temp_loader = SpreadsheetLoader(song_names[0] if song_names else "dummy")
+        self.cached_action_mappings = {
+            'action_name_to_time': temp_loader.get_action_name_to_time(),
+            'action_name_to_repeat_time': temp_loader.get_action_name_to_repeat_time()
+        }
+        
+        # Load robot actions for each song
+        for i, song_name in enumerate(song_names, 1):
+            self.logger.info(f"Pre-loading data for song {i}/{len(song_names)}: {song_name}")
+            try:
+                # Load spreadsheet data for this song
+                spreadsheet_loader = SpreadsheetLoader(song_name)
+                action_compiler = ActionCompiler(spreadsheet_loader)
+                robot_actions = action_compiler.compile_actions()
+                
+                # Cache the compiled data
+                self.cached_song_data[song_name] = {
+                    'robot_actions': robot_actions,
+                    'spreadsheet_loader': spreadsheet_loader  # Keep reference for other methods
+                }
+                
+                self.logger.debug(f"Cached {len(robot_actions)} action sequences for {song_name}")
+                
+            except Exception as e:
+                self.logger.error(f"Failed to preload data for song {song_name}: {e}")
+                # Store empty data to prevent processing this song later
+                self.cached_song_data[song_name] = {
+                    'robot_actions': [],
+                    'spreadsheet_loader': None
+                }
+        
+        load_time = time.time() - start_time
+        successful_loads = sum(1 for data in self.cached_song_data.values() if data['robot_actions'])
+        self.logger.info(f"Pre-loading completed in {load_time:.2f}s. "
+                        f"Successfully loaded {successful_loads}/{len(song_names)} songs.")
+        
+        # Log cache information
+        cache_info = cache_manager.get_cache_info()
+        if cache_info['enabled']:
+            self.logger.info(f"File cache: {cache_info['total_files']} files, "
+                           f"{cache_info['total_size_bytes']} bytes")
+        else:
+            self.logger.info("File cache is disabled")
+
     def _process_single_song(self, song_file_path: str, song_name: str) -> bool:
         """
-        Process a single song: load actions, initialize robots, and execute.
+        Process a single song: get cached actions, initialize robots, and execute.
 
         Args:
             song_file_path: Full path to the song file
@@ -155,23 +227,26 @@ class RobotActionPlanner:
         """
         robots = {}
         try:
-            # Load and compile actions
-            self.logger.info(f"Loading spreadsheet data for song: {song_name}")
-            spreadsheet_loader = SpreadsheetLoader(song_name)
-            action_compiler = ActionCompiler(spreadsheet_loader)
-            robot_actions = action_compiler.compile_actions()
-
+            # Get cached data
+            self.logger.info(f"Using cached spreadsheet data for song: {song_name}")
+            
+            if song_name not in self.cached_song_data:
+                self.logger.error(f"No cached data found for song: {song_name}")
+                return False
+            
+            cached_data = self.cached_song_data[song_name]
+            robot_actions = cached_data['robot_actions']
+            
             if not robot_actions:
                 self.logger.warning(f"No robot actions found for song: {song_name}")
                 return False
 
-            action_name_to_time = spreadsheet_loader.get_action_name_to_time()
-            action_name_to_repeat_time = (
-                spreadsheet_loader.get_action_name_to_repeat_time()
-            )
+            # Use cached action mappings
+            action_name_to_time = self.cached_action_mappings['action_name_to_time']
+            action_name_to_repeat_time = self.cached_action_mappings['action_name_to_repeat_time']
 
-            self.logger.info(f"Loaded {len(robot_actions)} action sequences")
-            self.logger.info(f"Loaded {len(action_name_to_time)} action definitions")
+            self.logger.info(f"Loaded {len(robot_actions)} action sequences (cached)")
+            self.logger.info(f"Loaded {len(action_name_to_time)} action definitions (cached)")
 
             # Initialize robots
             self.logger.info("Initializing robots...")
@@ -249,6 +324,19 @@ class RobotActionPlanner:
             f"Total action sequences executed: {self.stats['total_actions_executed']}"
         )
         self.logger.info(f"Robots initialized: {self.stats['robots_initialized']}")
+        
+        # Add caching statistics
+        total_cached = len(self.cached_song_data)
+        successful_cached = sum(1 for data in self.cached_song_data.values() if data['robot_actions'])
+        self.logger.info(f"Songs cached: {successful_cached}/{total_cached}")
+        
+        # Add file cache statistics
+        cache_info = cache_manager.get_cache_info()
+        if cache_info['enabled']:
+            self.logger.info(f"File cache: {cache_info['total_files']} files, "
+                           f"{cache_info['total_size_bytes']} bytes")
+        else:
+            self.logger.info("File cache: Disabled")
 
         total_songs = self.stats["songs_processed"] + self.stats["songs_failed"]
         if total_songs > 0:
