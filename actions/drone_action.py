@@ -195,7 +195,10 @@ class DroneAction(BaseAction):
             else:
                 self.logger.warning(f"Unknown drone action: {action_name}")
                 time.sleep(duration)
+                return True
 
+            # Wait for the action to complete
+            time.sleep(duration)
             return True
 
         except Exception as e:

@@ -580,6 +580,45 @@ class DogActionExecutor:
 
         return processed
 
+    def execute_action(self, action_name: str, duration: float) -> bool:
+        """
+        Synchronously execute a single action without using the queue.
+        
+        This method is called by the dog action handler to execute actions immediately
+        rather than going through the queuing system.
+        
+        Args:
+            action_name: Name of the action to execute
+            duration: Duration to execute the action for
+            
+        Returns:
+            True if action executed successfully, False otherwise
+        """
+        try:
+            # Convert action_name and duration to parameters format
+            parameters = {"duration": duration}
+            
+            # Execute the action directly
+            success = self._execute_dog_action(action_name, parameters)
+            
+            if success:
+                self.logger.info(f"Direct execution of '{action_name}' completed successfully")
+                return True
+            else:
+                self.logger.error(f"Direct execution of '{action_name}' failed")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error in direct execution of '{action_name}': {e}")
+            return False
+
+    def cleanup(self) -> None:
+        """Clean up dog executor resources."""
+        try:
+            self.shutdown()
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {e}")
+
     def remove_action_from_queue(self, action_id: str) -> None:
         """Remove an action from the queue by its ID."""
         self._remove_action_by_id(action_id)
