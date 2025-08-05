@@ -68,18 +68,18 @@ class AppConfig:
         import constant
 
         return cls(
-            robots=RobotConfig(ips=constant.ROBOT_IPS, enabled=True),
+            robots=RobotConfig(ips=constant.ROBOT_IPS, enabled=constant.ENABLE_ROBOTS),
             drones=DroneConfig(
                 simulator_mode=constant.DRONE_SIMULATOR,
                 simulator_ip=constant.DRONE_SIMULATOR_IP,
                 real_hosts=constant.DRONE_REAL_HOSTS,
                 simulator_ports=constant.DRONE_SIMULATOR_PORTS,
-                enabled=not constant.SKIP_DRONES,
+                enabled=constant.ENABLE_DRONES,
             ),
             dogs=DogConfig(
                 ips=constant.DOG_IPS,
                 ports=constant.DOG_PORTS,
-                enabled=not constant.SKIP_DOGS,
+                enabled=constant.ENABLE_DOGS,
             ),
             spreadsheet=SpreadsheetConfig(
                 action_sequence_id=constant.ACTION_SEQUENCE_SPREADSHEET_ID,
