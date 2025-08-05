@@ -10,9 +10,9 @@ import logging
 import time
 from typing import Dict, Any
 
-from api import DogController
-from action_executor import DogActionExecutor
-from config import (
+from .api import DogController
+from .action_executor import DogActionExecutor
+from .config import (
     DEFAULT_ROBOT_IP, 
     DEFAULT_ROBOT_PORT,
     ActionType,

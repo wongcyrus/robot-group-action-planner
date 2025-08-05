@@ -10,7 +10,7 @@ from concurrent.futures import Future
 from typing import Any, Dict, Optional
 
 import yaml
-from action_executor import DogActionExecutor
+from .action_executor import DogActionExecutor
 from awscrt import auth, mqtt5
 from awsiot import mqtt5_client_builder
 

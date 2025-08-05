@@ -28,7 +28,7 @@ class DogAction(BaseAction):
     def _initialize_dog_executor(self):
         """Initialize dog executor."""
         try:
-            from dog.action_executor import DogActionExecutor
+            from driver.dog.action_executor import DogActionExecutor
 
             self.dog_executor = DogActionExecutor(robot_name=self.dog_id)
             self.logger.info("Dog executor initialized successfully")

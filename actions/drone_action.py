@@ -28,7 +28,7 @@ class DroneAction(BaseAction):
     def _initialize_drone(self):
         """Initialize drone connection."""
         try:
-            from djitellopy import Tello
+            from driver.djitellopy import Tello
 
             self.tello = Tello()
             self.tello.connect()

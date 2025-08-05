@@ -9,7 +9,7 @@ movement and control operations.
 import logging
 import time
 
-from api import DogController
+from .api import DogController
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

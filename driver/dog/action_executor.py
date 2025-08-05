@@ -14,8 +14,8 @@ from typing import Any, Dict, Optional, Union
 from uuid import uuid4
 
 import requests
-from api import DogController
-from config import (
+from .api import DogController
+from .config import (
     DEFAULT_ACTION_SLEEP_TIME,
     DEFAULT_SPEED,
     HOP_ACTION_SLEEP_TIME,
@@ -211,7 +211,7 @@ class DogActionExecutor:
             return False
 
         try:
-            from config import (
+            from .config import (
                 DEFAULT_SPEED,
                 angle_to_duration,
                 distance_to_duration,
