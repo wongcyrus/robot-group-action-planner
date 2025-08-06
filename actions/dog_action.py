@@ -102,24 +102,24 @@ class DogAction(BaseAction):
         return 3.0
 
     def _execute_dog_command(self, action_name: str, duration: float) -> bool:
-        """Execute specific dog command."""
+        """Execute specific dog command with no retries."""
         if not self.dog_executor:
             # Simulation mode - timing controlled by execution engine
             self.logger.info(f"Simulating dog action: {action_name}")
             return True
 
         try:
-            # Execute action via dog executor
+            # Execute action via dog executor - single attempt only
             # Note: dog_executor already handles timing/duration internally
             success = self.dog_executor.execute_action(action_name, duration)
             if success:
                 self.logger.info(f"Dog action '{action_name}' executed successfully")
             else:
-                self.logger.error(f"Dog action '{action_name}' failed")
+                self.logger.error(f"Dog action '{action_name}' failed (no retries)")
             return success
 
         except Exception as e:
-            self.logger.error(f"Failed to execute dog command '{action_name}': {e}")
+            self.logger.error(f"Failed to execute dog command '{action_name}' (no retries): {e}")
             return False
 
     def cleanup(self) -> None:

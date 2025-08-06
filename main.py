@@ -269,6 +269,7 @@ class RobotActionPlanner:
             media_success = self.media_manager.start_media_for_song(
                 song_file_path, song_name
             )
+            self.media_manager.play_song_in_simulator(song_name)
             if not media_success:
                 self.logger.warning(
                     f"Failed to start media for {song_name}, continuing anyway"

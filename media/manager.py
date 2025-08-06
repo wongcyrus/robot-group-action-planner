@@ -6,6 +6,7 @@ import logging
 import os
 import subprocess
 import threading
+import requests
 from typing import List, Optional
 
 
@@ -151,6 +152,27 @@ class MediaManager:
 
         except Exception as e:
             self.logger.error(f"Error stopping media: {e}")
+
+    def play_song_in_simulator(self, song: str) -> None:
+        """Play song in simulator by changing video source."""
+        try:
+            # Import constants here to avoid circular imports
+            from constant import SIMULATOR_BASE_URL, SESSION_KEY, SONG_BASE_URL
+            
+            response = requests.post(
+                f"{SIMULATOR_BASE_URL}/api/video/change_source?session_key={SESSION_KEY}",
+                headers={"Content-Type": "application/json"},
+                json={"video_src": f"{SONG_BASE_URL}/{song}.mp4"},
+                timeout=3,
+            )
+            if response.status_code == 200:
+                self.logger.info(f"Simulator video source changed successfully for {song}.")
+            else:
+                self.logger.warning(
+                    f"Failed to change simulator video source: {response.status_code} {response.text}"
+                )
+        except requests.RequestException as e:
+            self.logger.error(f"Error calling simulator API: {e}")
 
     def cleanup(self) -> None:
         """Clean up media resources."""

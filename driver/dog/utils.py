@@ -317,6 +317,8 @@ def retry_on_exception(
     """
     Retry a function on exception.
     
+    Note: Default max_retries can be overridden by DOG_MAX_RETRIES constant.
+    
     Args:
         func: Function to retry
         max_retries: Maximum number of retries
@@ -329,6 +331,11 @@ def retry_on_exception(
     Raises:
         Last exception if all retries failed
     """
+    # Check if retries are disabled globally for dogs
+    from constant import DOG_MAX_RETRIES
+    if DOG_MAX_RETRIES == 0:
+        max_retries = 0
+    
     last_exception = None
     
     for attempt in range(max_retries + 1):
@@ -340,6 +347,9 @@ def retry_on_exception(
                 logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay}s...")
                 time.sleep(delay)
             else:
-                logger.error(f"All {max_retries + 1} attempts failed")
+                if max_retries == 0:
+                    logger.error(f"Command failed (no retries enabled)")
+                else:
+                    logger.error(f"All {max_retries + 1} attempts failed")
     
     raise last_exception

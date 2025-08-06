@@ -24,6 +24,9 @@ from .config import (
     ActionType,
 )
 
+# Import retry configuration constants
+from constant import DOG_COMMAND_TIMEOUT, DOG_MAX_RETRIES
+
 logger = logging.getLogger(__name__)
 
 # Dog-specific action configuration dictionary with enhanced parameters
@@ -198,6 +201,9 @@ class DogActionExecutor:
     ) -> bool:
         """
         Execute an action using the DogController API.
+        
+        Note: This method executes commands exactly once with no retries.
+        Failed commands will immediately return False.
 
         Args:
             action_name: Name of the action to execute
@@ -317,7 +323,8 @@ class DogActionExecutor:
             return True
 
         except Exception as e:
-            self.logger.error(f"Error executing dog action '{action_name}': {e}")
+            # No retries - fail immediately on any error
+            self.logger.error(f"Failed to execute dog action '{action_name}' (no retries): {e}")
             return False
 
     def _stop_dog_action(self) -> bool:
@@ -750,10 +757,11 @@ class DogActionExecutor:
             payload["parameters"] = parameters
 
         try:
+            # Use configured timeout, no retries
             response = requests.post(
                 url,
                 json=payload,
-                timeout=3.0,
+                timeout=DOG_COMMAND_TIMEOUT,
                 headers={"Content-Type": "application/json"},
             )
             response.raise_for_status()
@@ -763,7 +771,8 @@ class DogActionExecutor:
             )
             return resp_json
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"{log_error_msg}: {e}")
+            # No retries - fail immediately on any communication error
+            self.logger.error(f"{log_error_msg} (no retries): {e}")
             return None
 
 

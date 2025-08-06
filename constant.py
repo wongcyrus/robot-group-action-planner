@@ -44,6 +44,10 @@ DRONE_CONNECTION_TIMEOUT = 2  # Timeout for drone connection attempts (seconds)
 DRONE_COMMAND_TIMEOUT = 2  # Timeout for individual drone commands (seconds)
 DRONE_TAKEOFF_TIMEOUT = 8  # Timeout for takeoff commands (seconds)
 
+# Dog timeout and retry configuration
+DOG_COMMAND_TIMEOUT = 3  # Timeout for individual dog commands (seconds)
+DOG_MAX_RETRIES = 0  # Maximum number of retries for dog commands (0 = no retries)
+
 # Cache configuration
 USE_FILE_CACHE = False  # Set to False to disable persistent file caching
 CACHE_DIRECTORY = "cache"  # Directory to store cache files
