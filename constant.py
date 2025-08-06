@@ -15,21 +15,23 @@ HUMANOID_IPS = [
 ]
 
 # Dog robot configuration
-DOG_IPS = ["192.168.137.42"]  # IP addresses for 1 dog robots
+# DOG_IPS = ["192.168.137.42"]  # IP addresses for 1 dog robots
 
-# DOG_IPS = [ "192.168.137.42","192.168.137.41"]  # IP addresses for 2 dog robots
+DOG_IPS = [ "192.168.137.42","192.168.137.41"]  # IP addresses for 2 dog robots
 DOG_PORTS = [8830, 8830]  # UDP ports for dog robots (typically same port)
 
 # Drone configuration
 DRONE_SIMULATOR = False
 DRONE_SIMULATOR_IP = "192.168.25.128"
-DRONE_REAL_HOSTS = ["192.168.137.31", "192.168.137.32"]
+# DRONE_REAL_HOSTS = ["192.168.137.22"]
+DRONE_REAL_HOSTS = ["192.168.137.21", "192.168.137.22"]
+
 DRONE_SIMULATOR_PORTS = {
     "drone1": {"control_udp": 8889, "state_udp": 8890},
     "drone2": {"control_udp": 8890, "state_udp": 8891},
 }
 
-SIMULATOR_BASE_URL = ""
+SIMULATOR_BASE_URL = "https://iyfjqmah49.us-east-1.awsapprunner.com"
 SESSION_KEY = "hkiitshow"
 SONG_BASE_URL = "https://cdkstack-robotsimulatorconstructrobotsimulatorwebs-fxuvfxmglhc4.s3.us-east-1.amazonaws.com"
 

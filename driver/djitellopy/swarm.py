@@ -44,7 +44,7 @@ class TelloSwarm:
 
         tellos = []
         for ip in ips:
-            tellos.append(Tello(ip.strip()))
+            tellos.append(Tello(ip.strip(), retry_count=1))  # Single attempt only for swarm drones
 
         return TelloSwarm(tellos)
 

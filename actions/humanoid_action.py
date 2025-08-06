@@ -145,6 +145,8 @@ class HumanoidAction(BaseAction):
             )
 
         # Construct the URL in the format (same as original):
+        if robot_id.startswith("humanoid_"):
+            robot_id = robot_id.replace("humanoid_", "robot_")
         url = f"{SIMULATOR_BASE_URL}/run_action/{robot_id}?session_key={SESSION_KEY}"
 
         # Prepare the payload in the expected format: {"action": "bow"}

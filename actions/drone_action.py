@@ -43,7 +43,10 @@ class DroneAction(BaseAction):
             from driver.djitellopy import Tello
 
             self.tello = Tello(
-                host=self.host, control_udp=self.control_udp, state_udp=self.state_udp
+                host=self.host, 
+                control_udp=self.control_udp, 
+                state_udp=self.state_udp,
+                retry_count=1  # Single attempt, no retries
             )
             # Set shorter timeouts for faster failure detection
             self.tello.RESPONSE_TIMEOUT = (

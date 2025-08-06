@@ -584,7 +584,7 @@ class Tello:
         """Used to reaise an error after an unsuccessful command
         Internal method, you normally wouldn't call this yourself.
         """
-        tries = 1 + self.retry_count
+        tries = self.retry_count  # Actual number of attempts made
         raise TelloException("Command '{}' was unsuccessful for {} tries. Latest response:\t'{}'"
                              .format(command, tries, response))
 
