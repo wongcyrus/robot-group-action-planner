@@ -19,10 +19,14 @@ class DogAction(BaseAction):
         action_name_to_repeat_time: Optional[Dict[str, int]] = None,
         dog_executor=None,
         dog_id: str = "dog_1",
+        robot_ip: str = "127.0.0.1",
+        robot_port: int = 8830,
     ):
         super().__init__(dog_id, action_name_to_time, action_name_to_repeat_time)
         self.dog_executor = dog_executor
         self.dog_id = dog_id
+        self.robot_ip = robot_ip
+        self.robot_port = robot_port
         if not self.dog_executor:
             self._initialize_dog_executor()
 
@@ -31,7 +35,11 @@ class DogAction(BaseAction):
         try:
             from driver.dog.action_executor import DogActionExecutor
 
-            self.dog_executor = DogActionExecutor(robot_name=self.dog_id)
+            self.dog_executor = DogActionExecutor(
+                robot_name=self.dog_id,
+                robot_ip=self.robot_ip,
+                robot_port=self.robot_port
+            )
             self.logger.info("Dog executor initialized successfully")
         except ImportError:
             self.logger.warning("Dog module not available, using simulation mode")

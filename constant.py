@@ -6,16 +6,18 @@ ACTION_DETAILS_SPREADSHEET_ID = "1Bsgc60s3m_-dxhneTedxFlCCYxEp-9Ippu3Yr8dekxo"
 
 # Humanoid robot IP addresses (formerly generic "robots")
 HUMANOID_IPS = [
-    "http://192.168.137.7:9030",
-    "http://192.168.137.2:9030",
-    "http://192.168.137.3:9030",
-    "http://192.168.137.4:9030",
-    "http://192.168.137.5:9030",
-    "http://192.168.137.6:9030",
+    "192.168.137.7",
+    "192.168.137.2",
+    "192.168.137.3",
+    "192.168.137.4",
+    "192.168.137.5",
+    "192.168.137.6",
 ]
 
 # Dog robot configuration
-DOG_IPS = ["192.168.137.41", "192.168.137.42"]  # IP addresses for 2 dog robots
+DOG_IPS = [ "192.168.137.42"]  # IP addresses for 1 dog robots
+
+# DOG_IPS = [ "192.168.137.42","192.168.137.41"]  # IP addresses for 2 dog robots
 DOG_PORTS = [8830, 8830]  # UDP ports for dog robots (typically same port)
 
 # Drone configuration
@@ -27,7 +29,7 @@ DRONE_SIMULATOR_PORTS = {
     "drone2": {"control_udp": 8890, "state_udp": 8891},
 }
 
-SIMULATOR_BASE_URL = "https://iyfjqmah49.us-east-1.awsapprunner.com"
+SIMULATOR_BASE_URL = ""
 SESSION_KEY = "hkiitshow"
 SONG_BASE_URL = "https://cdkstack-robotsimulatorconstructrobotsimulatorwebs-fxuvfxmglhc4.s3.us-east-1.amazonaws.com"
 
@@ -36,7 +38,7 @@ ENABLE_DOGS = True  # Set to False to disable dog initialization
 ENABLE_HUMANOIDS = True  # Set to False to disable humanoid robot initialization
 
 # Cache configuration
-USE_FILE_CACHE = True  # Set to False to disable persistent file caching
+USE_FILE_CACHE = False  # Set to False to disable persistent file caching
 CACHE_DIRECTORY = "cache"  # Directory to store cache files
 CACHE_EXPIRY_HOURS = 24  # Cache expiry time in hours (0 = never expire)
 

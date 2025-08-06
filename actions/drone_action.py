@@ -19,10 +19,16 @@ class DroneAction(BaseAction):
         action_name_to_repeat_time: Optional[Dict[str, int]] = None,
         drone=None,
         drone_id: str = "drone_1",
+        host: str = "192.168.10.1",
+        control_udp: int = 8889,
+        state_udp: int = 8890,
     ):
         super().__init__(drone_id, action_name_to_time, action_name_to_repeat_time)
         self.tello = drone
         self.drone_id = drone_id
+        self.host = host
+        self.control_udp = control_udp
+        self.state_udp = state_udp
         if not self.tello:
             self._initialize_drone()
 
@@ -31,13 +37,17 @@ class DroneAction(BaseAction):
         try:
             from driver.djitellopy import Tello
 
-            self.tello = Tello()
+            self.tello = Tello(
+                host=self.host,
+                control_udp=self.control_udp,
+                state_udp=self.state_udp
+            )
             self.tello.connect()
-            self.logger.info("Drone connected successfully")
+            self.logger.info(f"Drone connected successfully to {self.host}")
         except ImportError:
             self.logger.warning("djitellopy not available, using simulation mode")
         except Exception as e:
-            self.logger.error(f"Failed to connect to drone: {e}")
+            self.logger.error(f"Failed to connect to drone at {self.host}: {e}")
 
     def _execute_single_action(
         self, action_name: str, stop_event: Optional[threading.Event] = None

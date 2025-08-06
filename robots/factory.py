@@ -89,29 +89,35 @@ class RobotFactory:
         try:
             # Create real drones if hosts are specified
             if self.config.drones.real_hosts:
-                for i, _ in enumerate(self.config.drones.real_hosts):
+                for i, host in enumerate(self.config.drones.real_hosts):
                     drone_id = f"drone_{i+1}"
 
                     drone = DroneAction(
                         action_name_to_time=action_name_to_time,
                         action_name_to_repeat_time=action_name_to_repeat_time,
                         drone_id=drone_id,
+                        host=host,
+                        control_udp=8889,  # Default Tello control port
+                        state_udp=8890,    # Default Tello state port
                     )
                     drones.append(drone)
-                    self.logger.info(f"Created real drone: {drone_id}")
+                    self.logger.info(f"Created real drone: {drone_id} at {host}")
 
             # Create simulator drones if enabled
             elif self.config.drones.simulator_mode:
-                for i in range(self.config.drones.simulator_count):
-                    drone_id = f"sim_drone_{i+1}"
+                for drone_name, ports in self.config.drones.simulator_ports.items():
+                    drone_id = f"sim_{drone_name}"
 
                     drone = DroneAction(
                         action_name_to_time=action_name_to_time,
                         action_name_to_repeat_time=action_name_to_repeat_time,
                         drone_id=drone_id,
+                        host=self.config.drones.simulator_ip,
+                        control_udp=ports["control_udp"],
+                        state_udp=ports["state_udp"],
                     )
                     drones.append(drone)
-                    self.logger.info(f"Created simulator drone: {drone_id}")
+                    self.logger.info(f"Created simulator drone: {drone_id} at {self.config.drones.simulator_ip}:{ports['control_udp']}")
 
         except Exception as e:
             self.logger.error(f"Error creating drones: {e}")
@@ -127,16 +133,20 @@ class RobotFactory:
         dogs = []
 
         try:
-            for i, _ in enumerate(self.config.dogs.ips):
+            for i, ip in enumerate(self.config.dogs.ips):
                 dog_id = f"dog_{i+1}"
+                # Get port for this dog (use index if available, otherwise first port)
+                port = self.config.dogs.ports[i] if i < len(self.config.dogs.ports) else self.config.dogs.ports[0]
 
                 dog = DogAction(
                     action_name_to_time=action_name_to_time,
                     action_name_to_repeat_time=action_name_to_repeat_time,
                     dog_id=dog_id,
+                    robot_ip=ip,
+                    robot_port=port,
                 )
                 dogs.append(dog)
-                self.logger.info(f"Created dog robot: {dog_id}")
+                self.logger.info(f"Created dog robot: {dog_id} at {ip}:{port}")
 
         except Exception as e:
             self.logger.error(f"Error creating dogs: {e}")

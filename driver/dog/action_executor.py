@@ -166,7 +166,7 @@ class DogActionExecutor:
         # Initialize dog controller
         try:
             self.dog_controller = DogController(ip=robot_ip, port=robot_port)
-            self.logger.info(f"Dog controller initialized for {robot_ip}:{robot_port}")
+            self.logger.info(f"Action executor controller initialized for {robot_ip}:{robot_port}")
         except Exception as e:
             self.logger.error(f"Failed to initialize dog controller: {e}")
             self.dog_controller = None

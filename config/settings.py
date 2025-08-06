@@ -12,7 +12,7 @@ class HumanoidConfig:
 
     ips: List[str]
     enabled: bool = True
-    port: int = 8080
+    port: int = 9030
 
 
 @dataclass
