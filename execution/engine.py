@@ -94,11 +94,14 @@ class ExecutionEngine:
                         if stop_event.is_set():
                             return False
 
+                        # Create thread with meaningful name
+                        thread_name = f"{action_key}_{action_name}"
                         thread = threading.Thread(
                             target=self._robot_action_wrapper,
-                            args=(robot, action_name, stop_event, results),
+                            args=(robot, action_name, stop_event, results, action_key),
+                            name=thread_name
                         )
-                        threads.append(thread)
+                        threads.append((thread, action_key, action_name))
                         thread.start()
 
                 if not robot_actions_found:
@@ -115,7 +118,7 @@ class ExecutionEngine:
             # The real timeout protection happens at the individual action level (drone commands, HTTP requests)
             self.logger.info("Waiting for all robot actions to complete...")
 
-            for i, thread in enumerate(threads):
+            for i, (thread, robot_id, action_name) in enumerate(threads):
                 thread_wait_start = time.time()
                 while thread.is_alive():
                     # Check every 0.5 seconds instead of blocking indefinitely
@@ -128,14 +131,14 @@ class ExecutionEngine:
                     thread_elapsed = time.time() - thread_wait_start
                     if thread_elapsed > max_wait_time + 2:  # 2 second grace period
                         self.logger.warning(
-                            f"Thread {i+1}/{len(threads)} has been running for {thread_elapsed:.1f}s "
+                            f"{robot_id} executing '{action_name}' has been running for {thread_elapsed:.1f}s "
                             f"(planned action time: {time_value}s) - may indicate blocking issue"
                         )
 
                 # Log when each thread completes
                 thread_duration = time.time() - thread_wait_start
                 self.logger.debug(
-                    f"Thread {i+1}/{len(threads)} completed in {thread_duration:.2f}s"
+                    f"{robot_id} executing '{action_name}' completed in {thread_duration:.2f}s"
                 )
 
             # Ensure we wait for the full time duration even if threads complete early
@@ -176,14 +179,18 @@ class ExecutionEngine:
         action_name: str,
         stop_event: threading.Event,
         results: List[bool],
+        robot_id: str,
     ) -> None:
         """Wrapper for robot action execution in thread."""
         try:
+            self.logger.debug(f"{robot_id} starting action '{action_name}'")
             success = robot.run_action(action_name, stop_event)
             results.append(success)
+            status = "succeeded" if success else "failed"
+            self.logger.debug(f"{robot_id} action '{action_name}' {status}")
 
         except Exception as e:
-            self.logger.error(f"Robot action failed: {e}")
+            self.logger.error(f"{robot_id} action '{action_name}' failed with exception: {e}")
             results.append(False)
 
     def cleanup_all_robots(self, robots: Dict[str, List[Any]]) -> None:
