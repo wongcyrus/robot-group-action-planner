@@ -244,18 +244,6 @@ class DogActionExecutor:
             if duration:
                 duration = validate_duration(duration)
 
-            # Handle walking mode for movement actions
-            if action_name in ["forward", "back", "left", "right", "cw", "ccw"]:
-                if not self._walking_mode_enabled:
-                    self.logger.info(
-                        "Walking mode is not enabled, enabling it permanently..."
-                    )
-                    self.dog_controller.enable_walking()
-                    time.sleep(2)  # Allow time for walking mode to activate
-                    self._walking_mode_enabled = True
-                    self.logger.info(
-                        "Walking mode enabled permanently for movement actions"
-                    )
 
             self.logger.info(
                 f"Executing dog action: {action_name} with speed={speed}, duration={duration}, parameters={parameters}"

@@ -53,6 +53,13 @@ class SimulatorConfig:
 
 
 @dataclass
+class MediaConfig:
+    """Configuration for media playback."""
+
+    play_song_in_pc: bool = False
+
+
+@dataclass
 class AppConfig:
     """Main application configuration."""
 
@@ -61,6 +68,7 @@ class AppConfig:
     dogs: DogConfig
     spreadsheet: SpreadsheetConfig
     simulator: SimulatorConfig
+    media: MediaConfig
 
     @classmethod
     def from_constants(cls) -> "AppConfig":
@@ -90,5 +98,8 @@ class AppConfig:
                 base_url=constant.SIMULATOR_BASE_URL,
                 session_key=constant.SESSION_KEY,
                 song_base_url=constant.SONG_BASE_URL,
+            ),
+            media=MediaConfig(
+                play_song_in_pc=constant.PLAY_SONG_IN_PC,
             ),
         )

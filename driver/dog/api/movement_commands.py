@@ -51,7 +51,7 @@ class MovementCommands:
 
         try:
             self.publisher.send(command)
-            logger.debug(f"Movement command sent: {kwargs}")
+            # logger.debug(f"Movement command sent: {kwargs}")
         except Exception as e:
             logger.error(f"{ERROR_MESSAGES['udp_send_failed']}: {e}")
             raise

@@ -266,14 +266,17 @@ class RobotActionPlanner:
 
             # Start media playback BEFORE action sequence loop (like original)
             self.logger.info(f"Starting media for song: {song_name}")
-            media_success = self.media_manager.start_media_for_song(
-                song_file_path, song_name
-            )
-            self.media_manager.play_song_in_simulator(song_name)
-            if not media_success:
-                self.logger.warning(
-                    f"Failed to start media for {song_name}, continuing anyway"
+
+            if self.config.media.play_song_in_pc:
+                media_success = self.media_manager.start_media_for_song(
+                    song_file_path, song_name
                 )
+                if not media_success:
+                    self.logger.warning(
+                        f"Failed to start media for {song_name}, continuing anyway"
+                    )
+            else:
+                self.media_manager.play_song_in_simulator(song_name)
 
             # Add delay to allow song to load properly
             self.logger.info("Waiting 1 seconds for song to load...")
@@ -287,8 +290,10 @@ class RobotActionPlanner:
 
             self.stats["total_actions_executed"] += len(robot_actions)
 
+            
             # Stop media AFTER all action sequences complete (like original)
-            self.media_manager.stop_media()
+            if self.config.media.play_song_in_pc:
+                self.media_manager.stop_media()
 
             return execution_success
 

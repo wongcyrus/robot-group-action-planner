@@ -39,6 +39,9 @@ ENABLE_DRONES = True  # Set to False to disable drone initialization
 ENABLE_DOGS = True  # Set to False to disable dog initialization
 ENABLE_HUMANOIDS = True  # Set to False to disable humanoid robot initialization
 
+# Media playback configuration
+PLAY_SONG_IN_PC = False  # Set to True to play song in PC, False to use simulator
+
 # Drone timeout configuration
 DRONE_CONNECTION_TIMEOUT = 2  # Timeout for drone connection attempts (seconds)
 DRONE_COMMAND_TIMEOUT = 2  # Timeout for individual drone commands (seconds)
