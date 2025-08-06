@@ -15,7 +15,7 @@ HUMANOID_IPS = [
 ]
 
 # Dog robot configuration
-DOG_IPS = [ "192.168.137.42"]  # IP addresses for 1 dog robots
+DOG_IPS = ["192.168.137.42"]  # IP addresses for 1 dog robots
 
 # DOG_IPS = [ "192.168.137.42","192.168.137.41"]  # IP addresses for 2 dog robots
 DOG_PORTS = [8830, 8830]  # UDP ports for dog robots (typically same port)
@@ -37,10 +37,18 @@ ENABLE_DRONES = True  # Set to False to disable drone initialization
 ENABLE_DOGS = True  # Set to False to disable dog initialization
 ENABLE_HUMANOIDS = True  # Set to False to disable humanoid robot initialization
 
+# Drone timeout configuration
+DRONE_CONNECTION_TIMEOUT = 2  # Timeout for drone connection attempts (seconds)
+DRONE_COMMAND_TIMEOUT = 2  # Timeout for individual drone commands (seconds)
+DRONE_TAKEOFF_TIMEOUT = 8  # Timeout for takeoff commands (seconds)
+
 # Cache configuration
 USE_FILE_CACHE = False  # Set to False to disable persistent file caching
 CACHE_DIRECTORY = "cache"  # Directory to store cache files
 CACHE_EXPIRY_HOURS = 24  # Cache expiry time in hours (0 = never expire)
+
+# Log configuration
+RESET_LOGS = True  # Set to True to delete all log files when program starts
 
 # Default action timings for different robot types
 # These values are extracted from the action classes to centralize timing configuration
@@ -61,7 +69,7 @@ DOG_DEFAULT_ACTION_TIMES = {
     "walk_mode": 1.0,
     "dance_mode": 1.0,
     # Stop action
-    "stop": 1.0
+    "stop": 1.0,
 }
 
 # Drone robot default action timings (seconds)
@@ -111,7 +119,7 @@ DRONE_DEFAULT_ACTION_TIMES = {
     # Complex movement actions
     "curve": 7.0,
     "go": 3.0,
-    "jump": 5.0
+    "jump": 5.0,
 }
 
 # Drone action pattern fallback timings (for actions that match patterns but aren't in the main dict)
@@ -120,17 +128,17 @@ DRONE_PATTERN_FALLBACK_TIMES = {
     "land": 3.0,
     "hover": 4.0,
     "curve": 7.0,  # Complex curve movements
-    "go": 3.0,     # XYZ movement actions
-    "jump": 5.0,   # Jump actions
-    "move": 3.0,   # Base movement pattern
-    "rotate": 3.0, # Base rotation pattern
-    "flip": 4.0    # Base flip pattern
+    "go": 3.0,  # XYZ movement actions
+    "jump": 5.0,  # Jump actions
+    "move": 3.0,  # Base movement pattern
+    "rotate": 3.0,  # Base rotation pattern
+    "flip": 4.0,  # Base flip pattern
 }
 
 # Dog action pattern fallback timings (for actions that match patterns but aren't in the main dict)
 DOG_PATTERN_FALLBACK_TIMES = {
     "forward": 3.0,
-    "back": 3.0, 
+    "back": 3.0,
     "left": 3.0,
     "right": 3.0,
     "sit": 2.0,
@@ -139,5 +147,5 @@ DOG_PATTERN_FALLBACK_TIMES = {
     "activate": 1.0,
     "walk_mode": 1.0,
     "dance_mode": 1.0,
-    "stop": 1.0
+    "stop": 1.0,
 }

@@ -7,7 +7,12 @@ import time
 from typing import Dict, Optional
 
 from actions.base_action import BaseAction
-from constant import DRONE_PATTERN_FALLBACK_TIMES
+from constant import (
+    DRONE_COMMAND_TIMEOUT,
+    DRONE_CONNECTION_TIMEOUT,
+    DRONE_PATTERN_FALLBACK_TIMES,
+    DRONE_TAKEOFF_TIMEOUT,
+)
 
 
 class DroneAction(BaseAction):
@@ -38,16 +43,20 @@ class DroneAction(BaseAction):
             from driver.djitellopy import Tello
 
             self.tello = Tello(
-                host=self.host,
-                control_udp=self.control_udp,
-                state_udp=self.state_udp
+                host=self.host, control_udp=self.control_udp, state_udp=self.state_udp
             )
+            # Set shorter timeouts for faster failure detection
+            self.tello.RESPONSE_TIMEOUT = (
+                DRONE_COMMAND_TIMEOUT  # Use configured timeout
+            )
+            self.tello.TAKEOFF_TIMEOUT = DRONE_TAKEOFF_TIMEOUT  # Use configured timeout
             self.tello.connect()
             self.logger.info(f"Drone connected successfully to {self.host}")
         except ImportError:
             self.logger.warning("djitellopy not available, using simulation mode")
         except Exception as e:
             self.logger.error(f"Failed to connect to drone at {self.host}: {e}")
+            self.tello = None  # Ensure tello is None if connection fails
 
     def _execute_single_action(
         self, action_name: str, stop_event: Optional[threading.Event] = None
@@ -59,7 +68,9 @@ class DroneAction(BaseAction):
         # If action not found in spreadsheet, use default timing like original version
         if action_time <= 0:
             action_time = self._get_default_action_time(action_name)
-            self.logger.info(f"Using default timing for drone action '{action_name}': {action_time}s")
+            self.logger.info(
+                f"Using default timing for drone action '{action_name}': {action_time}s"
+            )
 
         self.logger.info(
             f"Executing drone action '{action_name}' for {action_time}s, {repeat_count} times"
@@ -95,22 +106,28 @@ class DroneAction(BaseAction):
         for pattern, default_time in DRONE_PATTERN_FALLBACK_TIMES.items():
             if action_name_lower.startswith(pattern):
                 return default_time
-                
+
         # Default for unknown actions
         return 5.0
 
     def _execute_drone_command(self, action_name: str, duration: float) -> bool:
-        """Execute specific drone command."""
+        """Execute specific drone command with timeout protection."""
         if not self.tello:
-            # Simulation mode
+            # Simulation mode - log the action but don't sleep here
+            # The timing is controlled by the execution engine's time-based scheduling
             self.logger.info(f"Simulating drone action: {action_name}")
-            time.sleep(duration)
             return True
 
         try:
+            # Set per-command timeout to prevent blocking
+            original_timeout = getattr(self.tello, "RESPONSE_TIMEOUT", 7)
+            self.tello.RESPONSE_TIMEOUT = (
+                DRONE_COMMAND_TIMEOUT  # Use configured timeout
+            )
+
             # Map action names to drone commands - handle parameterized commands like original
             action_name_lower = action_name.lower()
-            
+
             if action_name_lower == "takeoff":
                 self.tello.takeoff()
             elif action_name_lower == "land":
@@ -153,7 +170,10 @@ class DroneAction(BaseAction):
                 if params and len(params) >= 7:
                     x1, y1, z1, x2, y2, z2, speed = params[:7]
                     self.tello.curve_xyz_speed(x1, y1, z1, x2, y2, z2, speed)
-                    self.logger.info(f"Drone: Curve from ({x1}, {y1}, {z1}) to ({x2}, {y2}, {z2}) at speed {speed}cm/s executed")
+                    self.logger.info(
+                        f"Drone: Curve from ({x1}, {y1}, {z1}) to "
+                        f"({x2}, {y2}, {z2}) at speed {speed}cm/s executed"
+                    )
                 else:
                     self.logger.error(f"Failed to parse curve command: {action_name}")
                     return False
@@ -163,7 +183,9 @@ class DroneAction(BaseAction):
                 if params and len(params) >= 4:
                     x, y, z, speed = params[:4]
                     self.tello.go_xyz_speed(x, y, z, speed)
-                    self.logger.info(f"Drone: Go to ({x}, {y}, {z}) at speed {speed}cm/s executed")
+                    self.logger.info(
+                        f"Drone: Go to ({x}, {y}, {z}) at speed {speed}cm/s executed"
+                    )
                 else:
                     self.logger.error(f"Failed to parse go command: {action_name}")
                     return False
@@ -196,12 +218,19 @@ class DroneAction(BaseAction):
                 time.sleep(duration)
                 return True
 
-            # Wait for the action to complete
-            time.sleep(duration)
+            # Restore original timeout
+            self.tello.RESPONSE_TIMEOUT = original_timeout
+
+            # Note: djitellopy commands already wait for acknowledgment
+            # The drone executes the movement autonomously after receiving the command
+            # No additional sleep needed here - the timing is handled by the action sequence
             return True
 
         except Exception as e:
             self.logger.error(f"Failed to execute drone command '{action_name}': {e}")
+            # Restore original timeout on error
+            if hasattr(self.tello, "RESPONSE_TIMEOUT"):
+                self.tello.RESPONSE_TIMEOUT = getattr(self, "_original_timeout", 7)
             return False
 
     def _extract_distance(self, action_name: str, default_distance: int) -> int:
@@ -221,15 +250,15 @@ class DroneAction(BaseAction):
     def _parse_command(self, action_name: str, command_prefix: str) -> list:
         """
         Parse commands with multiple parameters.
-        
+
         Examples:
         - go_100_50_-20_30 -> [100, 50, -20, 30]
         - curve_50_0_20_100_0_40_25 -> [50, 0, 20, 100, 0, 40, 25]
-        
+
         Args:
             action_name: The action name to parse
             command_prefix: The command prefix to remove (e.g., "go", "curve")
-            
+
         Returns:
             List of integer parameters, or None if parsing fails
         """
@@ -237,15 +266,15 @@ class DroneAction(BaseAction):
             # Remove the command prefix
             if not action_name.startswith(command_prefix):
                 return None
-                
+
             # Extract the parameter part
-            param_part = action_name[len(command_prefix):]
+            param_part = action_name[len(command_prefix) :]
             if not param_part.startswith("_"):
                 return None
-                
+
             # Split by underscore and convert to integers
             param_strings = param_part[1:].split("_")
-            
+
             # Convert all parameters to integers, handling negative numbers
             params = []
             for param_str in param_strings:
@@ -253,9 +282,9 @@ class DroneAction(BaseAction):
                     params.append(int(param_str))
                 else:
                     return None
-                    
+
             return params
-            
+
         except (ValueError, IndexError):
             return None
 

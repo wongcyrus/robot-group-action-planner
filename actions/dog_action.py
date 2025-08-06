@@ -3,7 +3,6 @@ Updated dog_action.py implementing BaseAction.
 """
 
 import threading
-import time
 from typing import Dict, Optional
 
 from actions.base_action import BaseAction
@@ -38,7 +37,7 @@ class DogAction(BaseAction):
             self.dog_executor = DogActionExecutor(
                 robot_name=self.dog_id,
                 robot_ip=self.robot_ip,
-                robot_port=self.robot_port
+                robot_port=self.robot_port,
             )
             self.logger.info("Dog executor initialized successfully")
         except ImportError:
@@ -56,7 +55,9 @@ class DogAction(BaseAction):
         # If action not found in spreadsheet, use default timing like original version
         if action_time <= 0:
             action_time = self._get_default_action_time(action_name)
-            self.logger.info(f"Using default timing for dog action '{action_name}': {action_time}s")
+            self.logger.info(
+                f"Using default timing for dog action '{action_name}': {action_time}s"
+            )
 
         self.logger.info(
             f"Executing dog action '{action_name}' for {action_time}s, {repeat_count} times"
@@ -91,29 +92,28 @@ class DogAction(BaseAction):
         # Check if action exists in our pattern fallback times
         if action_name_lower in DOG_PATTERN_FALLBACK_TIMES:
             return DOG_PATTERN_FALLBACK_TIMES[action_name_lower]
-        
+
         # Fallback logic for actions that match patterns
         for pattern, default_time in DOG_PATTERN_FALLBACK_TIMES.items():
             if action_name_lower == pattern or action_name_lower.startswith(pattern):
                 return default_time
-                
+
         # Default for completely unknown actions
         return 3.0
 
     def _execute_dog_command(self, action_name: str, duration: float) -> bool:
         """Execute specific dog command."""
         if not self.dog_executor:
-            # Simulation mode
+            # Simulation mode - timing controlled by execution engine
             self.logger.info(f"Simulating dog action: {action_name}")
-            time.sleep(duration)
             return True
 
         try:
             # Execute action via dog executor
+            # Note: dog_executor already handles timing/duration internally
             success = self.dog_executor.execute_action(action_name, duration)
             if success:
                 self.logger.info(f"Dog action '{action_name}' executed successfully")
-                time.sleep(duration)  # Wait for action completion
             else:
                 self.logger.error(f"Dog action '{action_name}' failed")
             return success
