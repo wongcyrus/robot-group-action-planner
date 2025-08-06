@@ -101,37 +101,11 @@ class RobotActionPlanner:
                     time.sleep(3)
 
         except KeyboardInterrupt:
-
-
-<< << << < HEAD
-            logger.info("Main loop interrupted by user (Ctrl+C). Exiting...")
-            stop_event.set()
-            return
-    if SIMULATOR_BASE_URL is None:
-        stop_song()
-
-
-def play_song_in_simulator(song):
-    try:
-        response = requests.post(
-            f"{SIMULATOR_BASE_URL}/api/video/change_source?session_key={SESSION_KEY}",
-            headers={"Content-Type": "application/json"},
-            json={"video_src": f"{SONG_BASE_URL}/{song}.mp4"},
-            timeout=3,
-        )
-        if response.status_code == 200:
-            logger.info(
-                f"Simulator video source changed successfully for {song}.")
-        else:
-            logger.warning(
-                f"Failed to change simulator video source: {response.status_code} {response.text}"
-=======
             self.logger.info("Application interrupted by user (Ctrl+C)")
             self.stop_event.set()
         except Exception as e:
             self.logger.error(
                 f"Unexpected error in main application: {e}", exc_info=True
->>>>>>> ee06404a3c289407f8fab556adb5a2f6655fefdc
             )
         finally:
             self._cleanup()
@@ -155,15 +129,18 @@ def play_song_in_simulator(song):
                 self.logger.error("No robot types are enabled or configured")
                 return False
 
-            self.logger.info(f"Enabled robot types: {', '.join(enabled_types)}")
+            self.logger.info(
+                f"Enabled robot types: {', '.join(enabled_types)}")
 
             # Validate spreadsheet configuration
             if not self.config.spreadsheet.action_sequence_id:
-                self.logger.error("No action sequence spreadsheet ID configured")
+                self.logger.error(
+                    "No action sequence spreadsheet ID configured")
                 return False
 
             if not self.config.spreadsheet.action_details_id:
-                self.logger.error("No action details spreadsheet ID configured")
+                self.logger.error(
+                    "No action details spreadsheet ID configured")
                 return False
 
             return True
@@ -180,64 +157,70 @@ def play_song_in_simulator(song):
     def _preload_all_song_data(self, song_files: list) -> None:
         """
         Pre-load all spreadsheet data for all songs to cache it for faster access.
-        
+
         Args:
             song_files: List of song file names to preload data for
         """
         self.logger.info("Pre-loading spreadsheet data for all songs...")
         start_time = time.time()
-        
+
         # Clean up expired cache files
         cleanup_count = cache_manager.cleanup_expired_cache()
         if cleanup_count > 0:
             self.logger.info(f"Cleaned up {cleanup_count} expired cache files")
-        
+
         # Extract song names from file names
-        song_names = [os.path.splitext(song_file)[0] for song_file in song_files]
-        
+        song_names = [os.path.splitext(song_file)[0]
+                      for song_file in song_files]
+
         # Load action details once (this is already cached in SpreadsheetLoader)
         self.logger.info("Loading action details...")
-        temp_loader = SpreadsheetLoader(song_names[0] if song_names else "dummy")
+        temp_loader = SpreadsheetLoader(
+            song_names[0] if song_names else "dummy")
         self.cached_action_mappings = {
             'action_name_to_time': temp_loader.get_action_name_to_time(),
             'action_name_to_repeat_time': temp_loader.get_action_name_to_repeat_time()
         }
-        
+
         # Load robot actions for each song
         for i, song_name in enumerate(song_names, 1):
-            self.logger.info(f"Pre-loading data for song {i}/{len(song_names)}: {song_name}")
+            self.logger.info(
+                f"Pre-loading data for song {i}/{len(song_names)}: {song_name}")
             try:
                 # Load spreadsheet data for this song
                 spreadsheet_loader = SpreadsheetLoader(song_name)
                 action_compiler = ActionCompiler(spreadsheet_loader)
                 robot_actions = action_compiler.compile_actions()
-                
+
                 # Cache the compiled data
                 self.cached_song_data[song_name] = {
                     'robot_actions': robot_actions,
                     'spreadsheet_loader': spreadsheet_loader  # Keep reference for other methods
                 }
-                
-                self.logger.debug(f"Cached {len(robot_actions)} action sequences for {song_name}")
-                
+
+                self.logger.debug(
+                    f"Cached {len(robot_actions)} action sequences for {song_name}")
+
             except Exception as e:
-                self.logger.error(f"Failed to preload data for song {song_name}: {e}")
+                self.logger.error(
+                    f"Failed to preload data for song {song_name}: {e}")
                 # Store empty data to prevent processing this song later
                 self.cached_song_data[song_name] = {
                     'robot_actions': [],
                     'spreadsheet_loader': None
                 }
-        
+
         load_time = time.time() - start_time
-        successful_loads = sum(1 for data in self.cached_song_data.values() if data['robot_actions'])
+        successful_loads = sum(
+            1 for data in self.cached_song_data.values() if data['robot_actions'])
         self.logger.info(f"Pre-loading completed in {load_time:.2f}s. "
-                        f"Successfully loaded {successful_loads}/{len(song_names)} songs.")
-        
+                         f"Successfully loaded {successful_loads}/{len(song_names)} songs.")
+
         # Log cache information
         cache_info = cache_manager.get_cache_info()
         if cache_info['enabled']:
             self.logger.info(f"File cache: {cache_info['total_files']} files, "
-                           f"{cache_info['total_size_bytes']} bytes")
+                             f"{cache_info['total_size_bytes']} bytes")
         else:
             self.logger.info("File cache is disabled")
 
@@ -255,25 +238,30 @@ def play_song_in_simulator(song):
         robots = {}
         try:
             # Get cached data
-            self.logger.info(f"Using cached spreadsheet data for song: {song_name}")
-            
+            self.logger.info(
+                f"Using cached spreadsheet data for song: {song_name}")
+
             if song_name not in self.cached_song_data:
-                self.logger.error(f"No cached data found for song: {song_name}")
+                self.logger.error(
+                    f"No cached data found for song: {song_name}")
                 return False
-            
+
             cached_data = self.cached_song_data[song_name]
             robot_actions = cached_data['robot_actions']
-            
+
             if not robot_actions:
-                self.logger.warning(f"No robot actions found for song: {song_name}")
+                self.logger.warning(
+                    f"No robot actions found for song: {song_name}")
                 return False
 
             # Use cached action mappings
             action_name_to_time = self.cached_action_mappings['action_name_to_time']
             action_name_to_repeat_time = self.cached_action_mappings['action_name_to_repeat_time']
 
-            self.logger.info(f"Loaded {len(robot_actions)} action sequences (cached)")
-            self.logger.info(f"Loaded {len(action_name_to_time)} action definitions (cached)")
+            self.logger.info(
+                f"Loaded {len(robot_actions)} action sequences (cached)")
+            self.logger.info(
+                f"Loaded {len(action_name_to_time)} action definitions (cached)")
 
             # Initialize robots
             self.logger.info("Initializing robots...")
@@ -286,7 +274,8 @@ def play_song_in_simulator(song):
                 return False
 
             # Count total robots
-            total_robots = sum(len(robot_list) for robot_list in robots.values())
+            total_robots = sum(len(robot_list)
+                               for robot_list in robots.values())
             self.stats["robots_initialized"] = total_robots
             self.logger.info(f"Successfully initialized {total_robots} robots")
 
@@ -305,7 +294,8 @@ def play_song_in_simulator(song):
             time.sleep(1)
 
             # Execute actions (the song will continue playing through all sequences)
-            self.logger.info(f"Executing {len(robot_actions)} action sequences...")
+            self.logger.info(
+                f"Executing {len(robot_actions)} action sequences...")
             execution_success = self.execution_engine.execute_action_sequence(
                 robots, robot_actions, self.stop_event
             )
@@ -318,7 +308,8 @@ def play_song_in_simulator(song):
             return execution_success
 
         except Exception as e:
-            self.logger.error(f"Error processing song {song_name}: {e}", exc_info=True)
+            self.logger.error(
+                f"Error processing song {song_name}: {e}", exc_info=True)
             return False
         finally:
             # Always cleanup robots
@@ -354,22 +345,25 @@ def play_song_in_simulator(song):
         self.logger.info(
             f"Total action sequences executed: {self.stats['total_actions_executed']}"
         )
-        self.logger.info(f"Robots initialized: {self.stats['robots_initialized']}")
-        
+        self.logger.info(
+            f"Robots initialized: {self.stats['robots_initialized']}")
+
         # Add caching statistics
         total_cached = len(self.cached_song_data)
-        successful_cached = sum(1 for data in self.cached_song_data.values() if data['robot_actions'])
+        successful_cached = sum(
+            1 for data in self.cached_song_data.values() if data['robot_actions'])
         self.logger.info(f"Songs cached: {successful_cached}/{total_cached}")
-        
+
         # Add file cache statistics
         cache_info = cache_manager.get_cache_info()
         if cache_info['enabled']:
             self.logger.info(f"File cache: {cache_info['total_files']} files, "
-                           f"{cache_info['total_size_bytes']} bytes")
+                             f"{cache_info['total_size_bytes']} bytes")
         else:
             self.logger.info("File cache: Disabled")
 
-        total_songs = self.stats["songs_processed"] + self.stats["songs_failed"]
+        total_songs = self.stats["songs_processed"] + \
+            self.stats["songs_failed"]
         if total_songs > 0:
             success_rate = (self.stats["songs_processed"] / total_songs) * 100
             self.logger.info(f"Success rate: {success_rate:.1f}%")
@@ -385,16 +379,16 @@ def play_song_in_simulator(song):
 def setup_logging(log_level: str = "INFO") -> None:
     """
     Setup application logging with centralized and individual robot type logs.
-    
+
     Creates the following log files in the 'logs' directory:
     - robot_planner.log: Centralized log containing all application messages
     - humanoid_debug.log: Debug log for humanoid robot actions only
     - drone_debug.log: Debug log for drone robot actions only  
     - dog_debug.log: Debug log for dog robot actions only
-    
+
     All logs use the same format and log level, but individual robot logs
     are filtered to contain only messages from their respective robot types.
-    
+
     Args:
         log_level: Console logging level (DEBUG, INFO, WARNING, ERROR)
     """
@@ -425,7 +419,7 @@ def setup_logging(log_level: str = "INFO") -> None:
     # Create individual debug log files for each robot type
     robot_types = {
         "humanoid": "humanoid_debug.log",
-        "drone": "drone_debug.log", 
+        "drone": "drone_debug.log",
         "dog": "dog_debug.log"
     }
 
@@ -440,15 +434,15 @@ def setup_logging(log_level: str = "INFO") -> None:
         class RobotTypeFilter:
             def __init__(self, robot_type):
                 self.robot_type = robot_type.lower()
-            
+
             def filter(self, record):
                 # Check if the logger name contains the robot type
                 logger_name = record.name.lower()
-                return (self.robot_type in logger_name or 
-                       f"{self.robot_type}action" in logger_name)
+                return (self.robot_type in logger_name or
+                        f"{self.robot_type}action" in logger_name)
 
         robot_file_handler.addFilter(RobotTypeFilter(robot_type))
-        
+
         # Add the handler to the root logger so it receives all messages
         root_logger.addHandler(robot_file_handler)
 
@@ -457,7 +451,8 @@ def setup_logging(log_level: str = "INFO") -> None:
     setup_logger.info(f"Logging configured with centralized log: {log_file}")
     for robot_type, log_filename in robot_types.items():
         robot_log_path = os.path.join(log_dir, log_filename)
-        setup_logger.info(f"Individual {robot_type} debug log: {robot_log_path}")
+        setup_logger.info(
+            f"Individual {robot_type} debug log: {robot_log_path}")
 
 
 def main() -> None:

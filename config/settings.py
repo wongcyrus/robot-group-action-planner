@@ -12,7 +12,7 @@ class HumanoidConfig:
 
     ips: List[str]
     enabled: bool = True
-    port: int = 8080
+    port: int = 9030
 
 
 @dataclass
@@ -69,7 +69,8 @@ class AppConfig:
         import constant
 
         return cls(
-            robots=HumanoidConfig(ips=constant.HUMANOID_IPS, enabled=constant.ENABLE_HUMANOIDS),
+            robots=HumanoidConfig(ips=constant.HUMANOID_IPS,
+                                  enabled=constant.ENABLE_HUMANOIDS),
             drones=DroneConfig(
                 simulator_mode=constant.DRONE_SIMULATOR,
                 simulator_ip=constant.DRONE_SIMULATOR_IP,

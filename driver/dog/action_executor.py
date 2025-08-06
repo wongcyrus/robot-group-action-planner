@@ -128,7 +128,8 @@ actions: Dict[str, Dict[str, Any]] = {
 }
 
 # Idle action state
-idle_action: Dict[str, Any] = {"name": None, "sleep_time": 0, "type": ActionType.IDLE}
+idle_action: Dict[str, Any] = {"name": None,
+                               "sleep_time": 0, "type": ActionType.IDLE}
 
 
 class DogActionExecutor:
@@ -166,7 +167,8 @@ class DogActionExecutor:
         # Initialize dog controller
         try:
             self.dog_controller = DogController(ip=robot_ip, port=robot_port)
-            self.logger.info(f"Dog controller initialized for {robot_ip}:{robot_port}")
+            self.logger.info(
+                f"Dog controller initialized for {robot_ip}:{robot_port}")
         except Exception as e:
             self.logger.error(f"Failed to initialize dog controller: {e}")
             self.dog_controller = None
@@ -188,10 +190,12 @@ class DogActionExecutor:
         }
 
         # Start consumer thread
-        self.consumer_thread = threading.Thread(target=self._consumer, daemon=True)
+        self.consumer_thread = threading.Thread(
+            target=self._consumer, daemon=True)
         self.consumer_thread.start()
 
-        self.logger.info(f"DogActionExecutor initialized for robot: {robot_name}")
+        self.logger.info(
+            f"DogActionExecutor initialized for robot: {robot_name}")
 
     def _execute_dog_action(
         self, action_name: str, parameters: Dict[str, Any] = None
@@ -264,15 +268,18 @@ class DogActionExecutor:
                     speed=speed, duration=duration
                 )
             elif action_name == "left":
-                self.dog_controller.movement.move_left(speed=speed, duration=duration)
+                self.dog_controller.movement.move_left(
+                    speed=speed, duration=duration)
             elif action_name == "right":
-                self.dog_controller.movement.move_right(speed=speed, duration=duration)
+                self.dog_controller.movement.move_right(
+                    speed=speed, duration=duration)
             elif action_name == "cw":
                 self.dog_controller.movement.rotate_right(
                     speed=speed, duration=duration
                 )
             elif action_name == "ccw":
-                self.dog_controller.movement.rotate_left(speed=speed, duration=duration)
+                self.dog_controller.movement.rotate_left(
+                    speed=speed, duration=duration)
             elif action_name == "stand_up":
                 self.dog_controller.movement.stand_up(speed=speed)
             elif action_name == "lay_down":
@@ -283,7 +290,7 @@ class DogActionExecutor:
             elif action_name == "activate":
                 self.dog_controller.activate()
             elif action_name == "walk_mode":
-                self._walking_mode_enabled = not self._walking_mode_enabled
+                # self._walking_mode_enabled = not self._walking_mode_enabled
                 self.dog_controller.enable_walking()
             elif action_name == "dance_mode":
                 self.dog_controller.enable_dancing()
@@ -313,11 +320,13 @@ class DogActionExecutor:
                 self.logger.error(f"Unknown action: {action_name}")
                 return False
 
-            self.logger.info(f"Dog action '{action_name}' executed successfully")
+            self.logger.info(
+                f"Dog action '{action_name}' executed successfully")
             return True
 
         except Exception as e:
-            self.logger.error(f"Error executing dog action '{action_name}': {e}")
+            self.logger.error(
+                f"Error executing dog action '{action_name}': {e}")
             return False
 
     def _stop_dog_action(self) -> bool:
@@ -387,7 +396,8 @@ class DogActionExecutor:
             elapsed = 0.0
             while elapsed < sleep_time:
                 if self._immediate_stop_event.is_set():
-                    self.logger.info(f"Stopping action execution for {action_name}")
+                    self.logger.info(
+                        f"Stopping action execution for {action_name}")
                     self._immediate_stop_event.clear()
                     self._stop_dog_action()
                     break
@@ -518,7 +528,8 @@ class DogActionExecutor:
             raise ValueError(f"Unknown action: {action_name}")
 
         # Validate and process parameters
-        processed_parameters = self._process_parameters(action_name, parameters or {})
+        processed_parameters = self._process_parameters(
+            action_name, parameters or {})
 
         with self.queue_lock:
             action_item = {
@@ -531,7 +542,8 @@ class DogActionExecutor:
 
             self.action_queue.put(action_item)
 
-        self.logger.info(f"Action '{action_name}' added to queue with ID: {action_id}")
+        self.logger.info(
+            f"Action '{action_name}' added to queue with ID: {action_id}")
         return action_id
 
     def _process_parameters(
@@ -583,33 +595,36 @@ class DogActionExecutor:
     def execute_action(self, action_name: str, duration: float) -> bool:
         """
         Synchronously execute a single action without using the queue.
-        
+
         This method is called by the dog action handler to execute actions immediately
         rather than going through the queuing system.
-        
+
         Args:
             action_name: Name of the action to execute
             duration: Duration to execute the action for
-            
+
         Returns:
             True if action executed successfully, False otherwise
         """
         try:
             # Convert action_name and duration to parameters format
             parameters = {"duration": duration}
-            
+
             # Execute the action directly
             success = self._execute_dog_action(action_name, parameters)
-            
+
             if success:
-                self.logger.info(f"Direct execution of '{action_name}' completed successfully")
+                self.logger.info(
+                    f"Direct execution of '{action_name}' completed successfully")
                 return True
             else:
-                self.logger.error(f"Direct execution of '{action_name}' failed")
+                self.logger.error(
+                    f"Direct execution of '{action_name}' failed")
                 return False
-                
+
         except Exception as e:
-            self.logger.error(f"Error in direct execution of '{action_name}': {e}")
+            self.logger.error(
+                f"Error in direct execution of '{action_name}': {e}")
             return False
 
     def cleanup(self) -> None:
@@ -696,7 +711,8 @@ class DogActionExecutor:
         if self.consumer_thread.is_alive():
             self.consumer_thread.join(timeout=5)
             if self.consumer_thread.is_alive():
-                self.logger.warning("Consumer thread did not shut down gracefully")
+                self.logger.warning(
+                    "Consumer thread did not shut down gracefully")
 
         self.logger.info("Action executor shutdown complete")
 

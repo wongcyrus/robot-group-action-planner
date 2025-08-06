@@ -6,12 +6,12 @@ ACTION_DETAILS_SPREADSHEET_ID = "1Bsgc60s3m_-dxhneTedxFlCCYxEp-9Ippu3Yr8dekxo"
 
 # Humanoid robot IP addresses (formerly generic "robots")
 HUMANOID_IPS = [
-    "http://192.168.137.7:9030",
-    "http://192.168.137.2:9030",
-    "http://192.168.137.3:9030",
-    "http://192.168.137.4:9030",
-    "http://192.168.137.5:9030",
-    "http://192.168.137.6:9030",
+    "192.168.137.2",
+    "192.168.137.3",
+    "192.168.137.4",
+    "192.168.137.5",
+    "192.168.137.6",
+    "192.168.137.7",
 ]
 
 # Dog robot configuration
@@ -21,11 +21,11 @@ DOG_PORTS = [8830, 8830]  # UDP ports for dog robots (typically same port)
 # Drone configuration
 DRONE_SIMULATOR = False
 DRONE_SIMULATOR_IP = "192.168.25.128"
-DRONE_REAL_HOSTS = ["192.168.137.31", "192.168.137.32"]
 DRONE_SIMULATOR_PORTS = {
     "drone1": {"control_udp": 8889, "state_udp": 8890},
     "drone2": {"control_udp": 8890, "state_udp": 8891},
 }
+DRONE_REAL_HOSTS = ["192.168.137.21", "192.168.137.22"]
 
 SIMULATOR_BASE_URL = "https://iyfjqmah49.us-east-1.awsapprunner.com"
 SESSION_KEY = "hkiitshow"

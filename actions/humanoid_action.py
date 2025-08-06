@@ -23,7 +23,7 @@ class HumanoidAction(BaseAction):
     ):
         super().__init__(robot_id, action_name_to_time, action_name_to_repeat_time)
         self.api_url = api_url.rstrip("/")
-        self.base_url = f"{self.api_url}/humanoid"
+        self.base_url = f"{self.api_url}"
 
     def _execute_single_action(
         self, action_name: str, stop_event: Optional[threading.Event] = None
@@ -33,7 +33,8 @@ class HumanoidAction(BaseAction):
         repeat_count = self.get_repeat_count(action_name)
 
         if action_time <= 0:
-            self.logger.warning(f"Action '{action_name}' not found or has invalid time")
+            self.logger.warning(
+                f"Action '{action_name}' not found or has invalid time")
             return False
 
         self.logger.info(
@@ -47,13 +48,14 @@ class HumanoidAction(BaseAction):
             try:
                 # Send action command to humanoid
                 response = requests.post(
-                    f"{self.base_url}/action",
+                    f"{self.base_url}",
                     json={"action": action_name, "duration": action_time},
                     timeout=30,
                 )
 
                 if response.status_code == 200:
-                    self.logger.info(f"Humanoid action '{action_name}' sent successfully")
+                    self.logger.info(
+                        f"Humanoid action '{action_name}' sent successfully")
                     time.sleep(action_time)  # Wait for action completion
                     self.logger.info(
                         f"Completed humanoid action '{action_name}' iteration {i + 1}/{repeat_count}"
@@ -74,7 +76,8 @@ class HumanoidAction(BaseAction):
 
     def cleanup(self) -> None:
         """Clean up resources."""
-        self.logger.info(f"Cleaning up humanoid action handler for {self.robot_id}")
+        self.logger.info(
+            f"Cleaning up humanoid action handler for {self.robot_id}")
 
 
 # Backward compatibility alias
