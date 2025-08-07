@@ -12,8 +12,8 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from actions.base_action import BaseAction
 from constant import DOG_PATTERN_FALLBACK_TIMES
+from robot_types.base_action import BaseAction
 
 
 class DogAction(BaseAction):

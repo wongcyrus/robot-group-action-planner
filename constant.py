@@ -53,7 +53,7 @@ DOG_MAX_RETRIES = 0  # Maximum number of retries for dog commands (0 = no retrie
 
 # Cache configuration
 USE_FILE_CACHE = False  # Set to False to disable persistent file caching
-CACHE_DIRECTORY = "cache"  # Directory to store cache files
+CACHE_DIRECTORY = "data"  # Directory to store cache files
 CACHE_EXPIRY_HOURS = 24  # Cache expiry time in hours (0 = never expire)
 
 # Log configuration

@@ -4,9 +4,9 @@ from typing import Dict, List, Optional
 
 import requests
 
-from constant import ACTION_DETAILS_SPREADSHEET_ID, ACTION_SEQUENCE_SPREADSHEET_ID
 from config.settings import AppConfig
-from cache_manager import cache_manager
+from constant import ACTION_DETAILS_SPREADSHEET_ID, ACTION_SEQUENCE_SPREADSHEET_ID
+from core.cache_manager import cache_manager
 
 
 class SpreadsheetLoader:
@@ -14,7 +14,7 @@ class SpreadsheetLoader:
 
     # Class-level cache for action details data - shared across all instances
     _action_details_cache: Optional[List[Dict[str, str]]] = None
-    
+
     # Class-level cache for robot actions data by song name
     _robot_actions_cache: Dict[str, List[Dict[str, str]]] = {}
 
@@ -66,7 +66,7 @@ class SpreadsheetLoader:
     def _load_robot_actions(self) -> List[Dict[str, str]]:
         # Create cache key for this song's robot actions
         cache_key = f"robot_actions_{self.dance}_{self.robot_actions_spreadsheet_id}"
-        
+
         # Try to get from file cache first
         cached_data = cache_manager.get_cache(cache_key)
         if cached_data is not None:
@@ -85,7 +85,7 @@ class SpreadsheetLoader:
         if not f:
             print("Failed to fetch robot actions spreadsheet data.")
             return []
-        
+
         # Generate columns dynamically based on IP configuration
         columns = self._generate_robot_columns()
         data = self._load_csv_data(f, columns)
@@ -100,26 +100,30 @@ class SpreadsheetLoader:
         """Generate robot column names based on IP configuration from settings."""
         config = AppConfig.from_constants()
         columns = ["Time"]
-        
+
         # Add humanoid columns based on configured IPs
         for i in range(len(config.robots.ips)):
             columns.append(f"Humanoid_{i+1}")
-        
+
         # Add drone columns based on configured IPs
-        drone_ips = config.drones.real_hosts if not config.drones.simulator_mode else [config.drones.simulator_ip]
+        drone_ips = (
+            config.drones.real_hosts
+            if not config.drones.simulator_mode
+            else [config.drones.simulator_ip]
+        )
         for i in range(len(drone_ips)):
             columns.append(f"Drone_{i+1}")
-        
+
         # Add dog columns based on configured IPs
         for i in range(len(config.dogs.ips)):
             columns.append(f"Dog_{i+1}")
-        
+
         return columns
 
     def _load_action_details(self) -> List[Dict[str, str]]:
         # Create cache key for action details
         cache_key = f"action_details_{self.action_details_spreadsheet_id}"
-        
+
         # Try to get from file cache first
         cached_data = cache_manager.get_cache(cache_key)
         if cached_data is not None:
@@ -160,9 +164,9 @@ class SpreadsheetLoader:
     def clear_robot_actions_cache(cls, song_name: Optional[str] = None) -> None:
         """
         Clear the cached robot actions data.
-        
+
         Args:
-            song_name: If provided, clears cache only for this song. 
+            song_name: If provided, clears cache only for this song.
                       If None, clears all robot actions cache.
         """
         if song_name:

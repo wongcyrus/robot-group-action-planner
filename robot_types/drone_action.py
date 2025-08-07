@@ -6,13 +6,13 @@ import threading
 import time
 from typing import Dict, Optional
 
-from actions.base_action import BaseAction
 from constant import (
     DRONE_COMMAND_TIMEOUT,
     DRONE_CONNECTION_TIMEOUT,
     DRONE_PATTERN_FALLBACK_TIMES,
     DRONE_TAKEOFF_TIMEOUT,
 )
+from robot_types.base_action import BaseAction
 
 
 class DroneAction(BaseAction):
@@ -40,13 +40,13 @@ class DroneAction(BaseAction):
     def _initialize_drone(self):
         """Initialize drone connection."""
         try:
-            from driver.djitellopy import Tello
+            from robot_hardware.djitellopy import Tello
 
             self.tello = Tello(
-                host=self.host, 
-                control_udp=self.control_udp, 
+                host=self.host,
+                control_udp=self.control_udp,
                 state_udp=self.state_udp,
-                retry_count=1  # Single attempt, no retries
+                retry_count=1,  # Single attempt, no retries
             )
             # Set shorter timeouts for faster failure detection
             self.tello.RESPONSE_TIMEOUT = (

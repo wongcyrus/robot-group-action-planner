@@ -3,13 +3,13 @@ from typing import Any, Dict, List, Union
 
 from jinja2 import BaseLoader, Environment
 
-from spreadsheet_loader import SpreadsheetLoader
 from constant import (
     DOG_DEFAULT_ACTION_TIMES,
-    DRONE_DEFAULT_ACTION_TIMES,
     DOG_PATTERN_FALLBACK_TIMES,
-    DRONE_PATTERN_FALLBACK_TIMES
+    DRONE_DEFAULT_ACTION_TIMES,
+    DRONE_PATTERN_FALLBACK_TIMES,
 )
+from core.spreadsheet_loader import SpreadsheetLoader
 
 
 class ActionCompiler:
@@ -34,13 +34,15 @@ class ActionCompiler:
 
     def _get_robot_keys(self, action: Dict[str, str]) -> List[str]:
         """Helper to get all robot keys in an action row.
-        
+
         Returns keys that start with:
         - Humanoid_ (humanoid robots)
-        - Drone_ (drone robots)  
+        - Drone_ (drone robots)
         - Dog_ (dog robots)
         """
-        return [key for key in action if key.startswith(( "Humanoid_", "Drone_", "Dog_"))]
+        return [
+            key for key in action if key.startswith(("Humanoid_", "Drone_", "Dog_"))
+        ]
 
     def _get_dog_default_actions(self) -> Dict[str, float]:
         """Extract default dog action timings from constants."""
@@ -55,70 +57,97 @@ class ActionCompiler:
         # Start with spreadsheet data and ensure all values are floats
         base_actions = self.spreadsheet_loader.get_action_name_to_time()
         action_name_to_time = {}
-        
+
         # Convert all values to floats
         for name, time_val in base_actions.items():
             try:
                 action_name_to_time[name] = float(time_val)
             except (ValueError, TypeError):
-                self.logger.warning(f"Invalid time value for action '{name}': {time_val}")
+                self.logger.warning(
+                    f"Invalid time value for action '{name}': {time_val}"
+                )
                 continue
-        
+
         # Add dog default actions
         dog_actions = self._get_dog_default_actions()
         for action, time_val in dog_actions.items():
             if action not in action_name_to_time:
                 action_name_to_time[action] = time_val
-        
+
         # Add drone default actions
         drone_actions = self._get_drone_default_actions()
         for action, time_val in drone_actions.items():
             if action not in action_name_to_time:
                 action_name_to_time[action] = time_val
-        
-        self.logger.debug(f"Enhanced action details loaded: {len(action_name_to_time)} actions")
+
+        self.logger.debug(
+            f"Enhanced action details loaded: {len(action_name_to_time)} actions"
+        )
         return action_name_to_time
 
-    def _get_action_time_with_fallback(self, action_name: str, action_name_to_time: Dict[str, Union[str, float]]) -> float:
+    def _get_action_time_with_fallback(
+        self, action_name: str, action_name_to_time: Dict[str, Union[str, float]]
+    ) -> float:
         """
-        Get action time with fallback logic for parameterized drone commands.
-        
+        Get action time with fallback logic for parameterized drone and dog commands.
+
         Args:
             action_name: The action name to look up
             action_name_to_time: The action mapping dictionary
-            
+
         Returns:
             The action time, or 0 if not found
         """
         action_lower = action_name.lower()
-        
-        # First try exact match
+
+        # First try exact match (original case and lowercase)
         if action_name in action_name_to_time:
             value = action_name_to_time[action_name]
             return float(value) if isinstance(value, (str, int, float)) else 0.0
         if action_lower in action_name_to_time:
             value = action_name_to_time[action_lower]
             return float(value) if isinstance(value, (str, int, float)) else 0.0
-        
-        # For drone actions, try pattern matching
+
+        # Enhanced drone action pattern matching
         if action_lower.startswith(("move_", "rotate_", "flip_")):
             # Extract base command (e.g., "move_up_100" -> "move_up")
-            parts = action_lower.split('_')
+            parts = action_lower.split("_")
             if len(parts) >= 2:
-                base_command = '_'.join(parts[:2])  # e.g., "move_up"
+                base_command = "_".join(parts[:2])  # e.g., "move_up"
                 if base_command in action_name_to_time:
-                    return action_name_to_time[base_command]
-                    
-        # Try more specific drone action patterns
+                    return float(action_name_to_time[base_command])
+
+        # Try more specific drone action patterns (ordered by specificity)
         for pattern, default_time in DRONE_PATTERN_FALLBACK_TIMES.items():
             if action_lower.startswith(pattern):
+                self.logger.debug(
+                    f"Action '{action_name}' matched drone pattern '{pattern}' with time {default_time}s"
+                )
                 return default_time
-                
-        # Dog action patterns
+
+        # Enhanced dog action pattern matching (check exact match first, then prefix)
         for pattern, default_time in DOG_PATTERN_FALLBACK_TIMES.items():
-            if action_lower == pattern or action_lower.startswith(pattern):
+            if action_lower == pattern or action_lower.startswith(pattern + "_"):
+                self.logger.debug(
+                    f"Action '{action_name}' matched dog pattern '{pattern}' with time {default_time}s"
+                )
                 return default_time
-        
+
+        # Additional pattern matching for common action variations
+        # Handle parameterized actions that might have numbers or additional suffixes
+        for base_action in action_name_to_time:
+            if isinstance(base_action, str) and action_lower.startswith(
+                base_action.lower() + "_"
+            ):
+                # Found a parameterized version of a known action
+                value = action_name_to_time[base_action]
+                if isinstance(value, (str, int, float)):
+                    self.logger.debug(
+                        f"Action '{action_name}' matched base action '{base_action}' "
+                        f"with time {float(value)}s"
+                    )
+                    return float(value)
+
         return 0.0  # Not found
 
     def compile_actions(self) -> List[Dict[str, Any]]:
@@ -145,16 +174,21 @@ class ActionCompiler:
         self.logger.info(f"Compiled {len(robot_actions)} action sequences")
         self.logger.debug(f"Action details loaded: {list(action_name_to_time.keys())}")
 
-        self.check_actions_existence(robot_actions, action_name_to_time, strict_mode=False)
+        self.check_actions_existence(
+            robot_actions, action_name_to_time, strict_mode=False
+        )
         self.check_actions_time(robot_actions, action_name_to_time)
 
         return robot_actions
 
     def check_actions_time(
-        self, robot_actions: List[Dict[str, str]], action_name_to_time: Dict[str, Union[str, float]]
+        self,
+        robot_actions: List[Dict[str, str]],
+        action_name_to_time: Dict[str, Union[str, float]],
     ) -> None:
         """
         Validate that action execution times don't exceed their allocated time slot.
+        Uses column names to determine robot types for better error reporting.
 
         Args:
             robot_actions: List of robot action sequences
@@ -165,25 +199,57 @@ class ActionCompiler:
         """
         for idx, action in enumerate(robot_actions, start=1):
             time_val = action.get("Time")
+            if not time_val:
+                self.logger.warning(
+                    f"Row {idx}: No time value specified, skipping validation"
+                )
+                continue
+
+            try:
+                allocated_time = float(time_val)
+            except (ValueError, TypeError):
+                self.logger.warning(
+                    f"Row {idx}: Invalid time value '{time_val}', skipping validation"
+                )
+                continue
+
             for key in self._get_robot_keys(action):
+                # Extract robot type from column name
+                robot_type = key.split("_")[0].lower()
+
                 value = action[key]
                 if value:
                     actions = [a.strip() for a in value.splitlines() if a.strip()]
-                    total_action_time = 0.0
+                    total_time = 0.0
+                    action_details = []
+
                     for act in actions:
-                        act_time = self._get_action_time_with_fallback(act, action_name_to_time)
-                        if act_time > 0:
-                            total_action_time += act_time
-                    if total_action_time > float(time_val):
+                        act_time = self._get_action_time_with_fallback(
+                            act, action_name_to_time
+                        )
+                        total_time += act_time
+                        action_details.append(f"{act}({act_time}s)")
+
+                    self.logger.debug(
+                        f"Row {idx} {robot_type} {key}: {', '.join(action_details)} "
+                        f"= {total_time}s / {allocated_time}s"
+                    )
+
+                    if total_time > allocated_time:
                         raise ValueError(
-                            f"Row {idx}: Sum of action times {total_action_time}s for '{key}' exceeds overall time {time_val}s"
+                            f"Row {idx}: {robot_type.title()} {key} actions exceed time limit "
+                            f"({total_time}s > {allocated_time}s): {', '.join(action_details)}"
                         )
 
     def check_actions_existence(
-        self, robot_actions: List[Dict[str, str]], action_name_to_time: Dict[str, Union[str, float]], strict_mode: bool = True
+        self,
+        robot_actions: List[Dict[str, str]],
+        action_name_to_time: Dict[str, Union[str, float]],
+        strict_mode: bool = True,
     ) -> None:
         """
         Validate that all specified actions exist in the action details or are known default actions.
+        Uses column names to determine robot types and validate appropriate actions.
 
         Args:
             robot_actions: List of robot action sequences
@@ -193,17 +259,40 @@ class ActionCompiler:
         Raises:
             ValueError: If an action is referenced but not defined in action details or defaults (strict_mode=True)
         """
+        missing_actions = {}  # Track missing actions by robot type
+
         for idx, action in enumerate(robot_actions, start=1):
             for key in self._get_robot_keys(action):
+                # Extract robot type from column name (e.g., "Drone_1" -> "drone")
+                robot_type = key.split("_")[0].lower()
+
                 value = action[key]
                 if value:
                     actions = [a.strip() for a in value.splitlines() if a.strip()]
                     for act in actions:
-                        action_time = self._get_action_time_with_fallback(act, action_name_to_time)
+                        action_time = self._get_action_time_with_fallback(
+                            act, action_name_to_time
+                        )
+
                         if action_time <= 0:
-                            error_msg = f"Row {idx}: Action '{act}' for key '{key}' not found in action details or defaults"
+                            # Track missing actions by robot type
+                            if robot_type not in missing_actions:
+                                missing_actions[robot_type] = set()
+                            missing_actions[robot_type].add(act)
+
+                            error_msg = f"Row {idx}: {robot_type.title()} action '{act}' not found"
+
                             if strict_mode:
                                 raise ValueError(error_msg)
                             else:
-                                # Log warning but don't fail - this allows for more flexible action definitions
-                                self.logger.warning(f"{error_msg}. This action may use runtime defaults.")
+                                self.logger.warning(
+                                    f"{error_msg}. May use runtime defaults."
+                                )
+
+        # Log summary of missing actions by robot type
+        if missing_actions:
+            for robot_type, actions in missing_actions.items():
+                action_list = sorted(list(actions))
+                self.logger.info(
+                    f"Missing {robot_type} actions ({len(action_list)}): {', '.join(action_list)}"
+                )

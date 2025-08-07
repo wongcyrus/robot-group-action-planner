@@ -5,9 +5,9 @@ Robot factory for creating robot instances.
 import logging
 from typing import Any, Dict, List
 
-from actions.humanoid_action import HumanoidAction
-from actions.dog_action import DogAction
-from actions.drone_action import DroneAction
+from robot_types.dog_action import DogAction
+from robot_types.drone_action import DroneAction
+from robot_types.humanoid_action import HumanoidAction
 
 
 class RobotFactory:
@@ -98,7 +98,7 @@ class RobotFactory:
                         drone_id=drone_id,
                         host=host,
                         control_udp=8889,  # Default Tello control port
-                        state_udp=8890,    # Default Tello state port
+                        state_udp=8890,  # Default Tello state port
                     )
                     drones.append(drone)
                     self.logger.info(f"Created real drone: {drone_id} at {host}")
@@ -117,7 +117,9 @@ class RobotFactory:
                         state_udp=ports["state_udp"],
                     )
                     drones.append(drone)
-                    self.logger.info(f"Created simulator drone: {drone_id} at {self.config.drones.simulator_ip}:{ports['control_udp']}")
+                    self.logger.info(
+                        f"Created simulator drone: {drone_id} at {self.config.drones.simulator_ip}:{ports['control_udp']}"
+                    )
 
         except Exception as e:
             self.logger.error(f"Error creating drones: {e}")
@@ -136,7 +138,11 @@ class RobotFactory:
             for i, ip in enumerate(self.config.dogs.ips):
                 dog_id = f"dog_{i+1}"
                 # Get port for this dog (use index if available, otherwise first port)
-                port = self.config.dogs.ports[i] if i < len(self.config.dogs.ports) else self.config.dogs.ports[0]
+                port = (
+                    self.config.dogs.ports[i]
+                    if i < len(self.config.dogs.ports)
+                    else self.config.dogs.ports[0]
+                )
 
                 dog = DogAction(
                     action_name_to_time=action_name_to_time,

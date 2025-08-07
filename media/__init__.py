@@ -1,3 +1,0 @@
-"""
-Media and song management.
-"""

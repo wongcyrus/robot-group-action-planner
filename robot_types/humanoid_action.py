@@ -8,8 +8,8 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from actions.base_action import BaseAction
 from constant import SESSION_KEY, SIMULATOR_BASE_URL
+from robot_types.base_action import BaseAction
 
 
 class HumanoidAction(BaseAction):
@@ -47,7 +47,7 @@ class HumanoidAction(BaseAction):
             log_success_msg=f"Action run_action({action_name}, {repeat_count}) successful.",
             log_error_msg=f"Error running action run_action({action_name}, {repeat_count}):",
         )
-        
+
         if result is None:
             return False
 
