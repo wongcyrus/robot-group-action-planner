@@ -1,7 +1,11 @@
 import logging
+import os
 from typing import Any, Dict, List, Union
 
 from jinja2 import BaseLoader, Environment
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 from constant import (
     DOG_DEFAULT_ACTION_TIMES,
@@ -150,9 +154,16 @@ class ActionCompiler:
 
         return 0.0  # Not found
 
-    def compile_actions(self) -> List[Dict[str, Any]]:
+    def compile_actions(
+        self, export_excel: bool = False, csv_path: str = None, song_name: str = None
+    ) -> List[Dict[str, Any]]:
         """
         Compile and validate robot actions from spreadsheet data.
+
+        Args:
+            export_csv: If True, also export the compiled actions to CSV with duration annotations
+            csv_path: Optional path for the CSV export. If None, saves to data folder
+            song_name: Optional song name for better cache filename generation
 
         Returns:
             List of dictionaries containing validated robot actions
@@ -179,7 +190,201 @@ class ActionCompiler:
         )
         self.check_actions_time(robot_actions, action_name_to_time)
 
+        # Optional Excel export to data folder
+        if export_excel:
+            excel_file = self.export_compiled_actions_to_excel(csv_path, song_name)
+            self.logger.info(f"Actions exported to Excel cache: {excel_file}")
+
         return robot_actions
+
+    def export_compiled_actions_to_excel(
+        self, output_path: str = None, song_name: str = None
+    ) -> str:
+        """
+        Export compiled actions to Excel format with duration annotations and formatting.
+        Files are saved to the data folder as cache.
+
+        Each action in robot columns will be formatted as: action_name (duration)
+        Multiline actions are preserved in the Excel cells with proper formatting.
+
+        Args:
+            output_path: Optional path to save the Excel file. If None, auto-generates in data folder
+            song_name: Optional song name for cache-friendly filename generation
+
+        Returns:
+            The path to the exported Excel file
+        """
+        # Auto-generate path if not provided
+        if output_path is None:
+            # Create data folder if it doesn't exist
+            data_folder = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), "data"
+            )
+            os.makedirs(data_folder, exist_ok=True)
+
+            # Generate cache-friendly filename
+            if song_name:
+                # Use song name for filename
+                safe_song_name = "".join(
+                    c for c in song_name if c.isalnum() or c in ("-", "_")
+                )
+                filename = f"compiled_actions_{safe_song_name}.xlsx"
+            else:
+                # Fallback to spreadsheet ID
+                spreadsheet_id = getattr(
+                    self.spreadsheet_loader, "spreadsheet_id", "unknown"
+                )
+                safe_id = "".join(
+                    c for c in str(spreadsheet_id) if c.isalnum() or c in ("-", "_")
+                )
+                filename = f"compiled_actions_{safe_id}.xlsx"
+
+            output_path = os.path.join(data_folder, filename)
+
+        # Ensure output directory exists
+        output_dir = os.path.dirname(output_path)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+
+        robot_actions = self.spreadsheet_loader.get_robot_actions()
+        action_name_to_time = self._get_enhanced_action_name_to_time()
+
+        # Process actions to add duration annotations
+        processed_actions = []
+        for action in robot_actions:
+            processed_action = action.copy()
+
+            for key in self._get_robot_keys(action):
+                value = action[key]
+                if value:
+                    # Handle Jinja2 templates
+                    if "{{" in value or "}}" in value:
+                        rtemplate = Environment(loader=BaseLoader).from_string(value)
+                        value = rtemplate.render({})
+
+                    # Process each action line
+                    action_lines = [a.strip() for a in value.splitlines() if a.strip()]
+                    annotated_lines = []
+                    total_cell_time = 0.0
+
+                    for act in action_lines:
+                        act_time = self._get_action_time_with_fallback(
+                            act, action_name_to_time
+                        )
+                        total_cell_time += act_time
+                        if act_time > 0:
+                            annotated_lines.append(f"{act} ({act_time} s)")
+                        else:
+                            annotated_lines.append(f"{act} (0 s)")
+
+                    # Add total time at the BEGINNING if there are actions
+                    if annotated_lines:
+                        # Insert total time as first line with clear formatting
+                        annotated_lines.insert(0, f"⏱️ TOTAL: {total_cell_time} s")
+
+                    # Join back with newlines to preserve multiline format
+                    processed_action[key] = "\n".join(annotated_lines)
+
+            processed_actions.append(processed_action)
+
+        # Create Excel workbook with formatting
+        if processed_actions:
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Robot Actions"
+
+            # Get column headers
+            headers = list(processed_actions[0].keys())
+
+            # Style definitions
+            header_font = Font(bold=True, color="FFFFFF")
+            header_fill = PatternFill(
+                start_color="366092", end_color="366092", fill_type="solid"
+            )
+            time_fill = PatternFill(
+                start_color="E6F3FF", end_color="E6F3FF", fill_type="solid"
+            )
+            robot_fill = PatternFill(
+                start_color="F0F8FF", end_color="F0F8FF", fill_type="solid"
+            )
+            total_time_font = Font(bold=True, color="0066CC", size=11)
+
+            # Write headers with formatting
+            for col_idx, header in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=col_idx, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            # Write data rows
+            for row_idx, action in enumerate(processed_actions, 2):
+                for col_idx, header in enumerate(headers, 1):
+                    cell_value = action.get(header, "")
+                    cell = ws.cell(row=row_idx, column=col_idx, value=cell_value)
+
+                    # Apply formatting based on column type
+                    if header == "Time":
+                        cell.fill = time_fill
+                        cell.alignment = Alignment(
+                            horizontal="center", vertical="center"
+                        )
+                        cell.font = Font(bold=True)
+                    elif header.startswith(("Humanoid_", "Drone_", "Dog_")):
+                        cell.fill = robot_fill
+                        cell.alignment = Alignment(
+                            horizontal="left", vertical="top", wrap_text=True
+                        )
+
+                        # Check if cell starts with total time and apply special formatting
+                        if cell_value and cell_value.startswith("⏱️ TOTAL:"):
+                            # Apply special formatting for cells with totals at the beginning
+                            cell.font = total_time_font
+                        else:
+                            cell.font = Font(size=10)
+                    else:
+                        cell.alignment = Alignment(horizontal="left", vertical="center")
+
+            # Auto-adjust column widths
+            for col_idx, header in enumerate(headers, 1):
+                column_letter = get_column_letter(col_idx)
+                if header == "Time":
+                    ws.column_dimensions[column_letter].width = 8
+                elif header.startswith(("Humanoid_", "Drone_", "Dog_")):
+                    ws.column_dimensions[column_letter].width = 25
+                else:
+                    ws.column_dimensions[column_letter].width = 15
+
+            # Adjust row heights for better readability
+            for row_idx in range(2, len(processed_actions) + 2):
+                ws.row_dimensions[row_idx].height = None  # Auto height
+                # Check if any cell in this row has multiple lines
+                for col_idx, header in enumerate(headers, 1):
+                    if header.startswith(("Humanoid_", "Drone_", "Dog_")):
+                        cell_value = processed_actions[row_idx - 2].get(header, "")
+                        if cell_value and "\n" in cell_value:
+                            # Set minimum height for multiline cells
+                            line_count = cell_value.count("\n") + 1
+                            min_height = max(20, line_count * 15)
+                            ws.row_dimensions[row_idx].height = min_height
+                            break
+
+            # Save the workbook
+            wb.save(output_path)
+
+        self.logger.info(
+            f"Exported {len(processed_actions)} compiled actions to {output_path}"
+        )
+        return output_path
+
+    # Keep the old CSV method for backward compatibility
+    def export_compiled_actions_to_csv(
+        self, output_path: str = None, song_name: str = None
+    ) -> str:
+        """
+        Legacy CSV export method - redirects to Excel export.
+        Maintained for backward compatibility.
+        """
+        return self.export_compiled_actions_to_excel(output_path, song_name)
 
     def check_actions_time(
         self,

@@ -1,6 +1,8 @@
 # Robot Group Action Planner
 
-A comprehensive tool to control multiple types of robots simultaneously using Google### Advanced Features
+A comprehensive tool to control multiple types of robots simultaneously using Google Sheets for choreographed performances. **This system provides advanced maintainability, modularity, and streamlined complexity management.**
+
+### Advanced Features
 - **Comprehensive logging**: Centralized and robot-specific log files
 - **Error handling & recovery**: Graceful failure handling with automatic cleanup
 - **Statistics tracking**: Real-time monitoring and post-execution analytics  
@@ -13,7 +15,7 @@ A comprehensive tool to control multiple types of robots simultaneously using Go
 - **Dual-layer caching**: Memory and file-based caching for maximum speed
 - **Pre-loading**: All spreadsheet data loaded at startup for faster execution
 - **Cache management**: Automatic cleanup of expired cache files
-- **Performance monitoring**: Built-in cache hit/miss tracking and statisticssheets for choreographed performances. **This system provides advanced maintainability, modularity, and streamlined complexity management.**
+- **Performance monitoring**: Built-in cache hit/miss tracking and statistics
 
 ## ✨ Key Features
 
@@ -54,69 +56,74 @@ The system follows a modular, object-oriented architecture that separates concer
 robot-group-action-planner/
 ├── main.py                     # Main entry point and orchestrator
 ├── constant.py                 # Global configuration constants
-├── action_compiler.py          # Compiles spreadsheet data into actions
-├── spreadsheet_loader.py       # Google Sheets integration
-├── cache_manager.py            # File-based caching system
 ├── setup_venv.ps1             # Virtual environment setup script
 ├── requirements.txt           # Python dependencies
+├── STRUCTURE.md               # Project structure documentation
 │
-├── docs/                      # Documentation
-│   ├── CACHING_OPTIMIZATION.md    # Detailed caching documentation
-│   └── CACHE_QUICK_START.md       # Quick start guide for caching
-│
-├── utils/                     # Utility scripts and tools
+├── core/                      # Core System Components
 │   ├── __init__.py
-│   ├── cache_utils.py         # Cache management utility
-│   └── test_caching.py        # Caching performance test
+│   ├── action_compiler.py     # Compiles spreadsheet data into actions
+│   ├── spreadsheet_loader.py  # Google Sheets integration
+│   └── cache_manager.py       # File-based caching system
 │
 ├── config/                    # Configuration Management
 │   ├── __init__.py
 │   └── settings.py           # Structured configuration classes
 │
-├── actions/                   # Robot Action Implementations
+├── robot_types/              # Robot Action Implementations
 │   ├── __init__.py
 │   ├── base_action.py        # Abstract base class for all actions
 │   ├── humanoid_action.py    # HTTP API-based humanoid robots
 │   ├── drone_action.py       # DJI Tello drone controls
 │   └── dog_action.py         # Quadruped robot controls
 │
-├── robots/                    # Robot Factory & Management
+├── robot_factory/            # Robot Factory & Management
 │   ├── __init__.py
 │   └── factory.py            # Robot creation and initialization
 │
-├── execution/                 # Action Execution Engine
+├── playback/                 # Execution Engine & Media Management
 │   ├── __init__.py
-│   └── engine.py             # Coordinates multi-robot execution
-│
-├── media/                     # Media & Song Management
-│   ├── __init__.py
+│   ├── engine.py             # Coordinates multi-robot execution
 │   └── manager.py            # Media playback coordination
 │
-├── driver/                    # Hardware Drivers
-│   ├── djitellopy/           # DJI Tello drone driver
-│   │   ├── __init__.py
-│   │   ├── tello.py
-│   │   ├── swarm.py
-│   │   └── enforce_types.py
-│   └── dog/                  # Quadruped robot driver
-│       ├── __init__.py
-│       ├── config.py
-│       ├── action_executor.py
-│       ├── pubsub.py         # AWS IoT integration
-│       └── api/              # Robot control API
-│           ├── dog_controller.py
-│           ├── movement_commands.py
-│           ├── robot_status.py
-│           └── UDPComms/     # UDP communication layer
+├── robot_hardware/           # Hardware Drivers
+│   ├── __init__.py
+│   └── djitellopy/           # DJI Tello drone driver integration
 │
-├── logs/                      # Application Logs
-│   ├── robot_planner.log     # Centralized application log
-│   ├── humanoid_debug.log    # Humanoid robot specific logs
-│   ├── drone_debug.log       # Drone specific logs
-│   └── dog_debug.log         # Dog robot specific logs
+├── tools/                    # Utility Tools
+│   ├── __init__.py
+│   ├── cache_utils.py        # Cache management utility
+│   └── log_utils.py          # Logging utilities
 │
-└── song/                      # Media Files
-    └── *.mp4                 # Song files for choreography
+├── docs/                     # Documentation
+│   ├── CACHE_QUICK_START.md      # Quick start guide for caching
+│   ├── CACHING_OPTIMIZATION.md   # Detailed caching documentation
+│   ├── CSV_CACHE_IMPLEMENTATION.md
+│   ├── CSV_EXPORT_FEATURE.md
+│   ├── DOG_ACTION_CONSOLIDATION.md
+│   ├── DOG_ACTION_DURATION_SOLUTION.md
+│   ├── DOG_ACTION_TIMING_GUIDE.md
+│   ├── EXCEL_EXPORT_FEATURE.md
+│   └── FILE_ORGANIZATION.md
+│
+├── data/                     # Data Storage
+│   ├── __init__.py
+│   ├── *.json               # Cached action data files
+│   └── *.xlsx               # Compiled action spreadsheets
+│
+├── logs/                     # Application Logs
+│   ├── robot_planner.log    # Centralized application log
+│   ├── humanoid_debug.log   # Humanoid robot specific logs
+│   ├── drone_debug.log      # Drone specific logs
+│   └── dog_debug.log        # Dog robot specific logs
+│
+├── songs/                    # Media Files
+│   └── *.mp4                # Song files for choreography
+│
+└── StanfordQuadruped/        # Quadruped Robot Integration
+    ├── pupper/              # Pupper robot control library
+    ├── src/                 # Source code for quadruped integration
+    └── tests/               # Testing utilities
 ```
 
 ## 🚀 Features
@@ -247,7 +254,7 @@ All robot types implement the same `BaseAction` interface, enabling:
    ENABLE_DOGS = True
    ```
 
-4. **Add your songs** to the `song/` folder (`.mp4` files)
+4. **Add your songs** to the `songs/` folder (`.mp4` files)
 
 5. **Run the application**:
    ```bash
@@ -316,7 +323,7 @@ python main.py
 The application will:
 1. **Load configuration** from `constant.py`
 2. **Validate robot connectivity** and configuration
-3. **Scan for song files** in the `song/` directory
+3. **Scan for song files** in the `songs/` directory
 4. **Process each song** sequentially:
    - Load spreadsheet data
    - Compile action sequences
@@ -327,14 +334,14 @@ The application will:
 
 ### Expected Output
 ```
-2025-01-15 10:30:00,123 - Main - INFO - Starting Robot Action Planner
-2025-01-15 10:30:00,124 - RobotActionPlanner - INFO - Loading configuration...
-2025-01-15 10:30:00,125 - RobotActionPlanner - INFO - Enabled robot types: humanoids, drones, dogs
-2025-01-15 10:30:00,126 - RobotActionPlanner - INFO - Found 3 song files to process
-2025-01-15 10:30:00,127 - RobotActionPlanner - INFO - Processing song: my_choreography
-2025-01-15 10:30:01,200 - RobotActionPlanner - INFO - Successfully initialized 8 robots
-2025-01-15 10:30:01,201 - ExecutionEngine - INFO - Executing 15 action sequences...
-2025-01-15 10:30:25,500 - RobotActionPlanner - INFO - Successfully processed song: my_choreography
+2025-08-07 10:30:00,123 - Main - INFO - Starting Robot Action Planner
+2025-08-07 10:30:00,124 - RobotActionPlanner - INFO - Loading configuration...
+2025-08-07 10:30:00,125 - RobotActionPlanner - INFO - Enabled robot types: humanoids, drones, dogs
+2025-08-07 10:30:00,126 - RobotActionPlanner - INFO - Found 3 song files to process
+2025-08-07 10:30:00,127 - RobotActionPlanner - INFO - Processing song: my_choreography
+2025-08-07 10:30:01,200 - RobotActionPlanner - INFO - Successfully initialized 8 robots
+2025-08-07 10:30:01,201 - ExecutionEngine - INFO - Executing 15 action sequences...
+2025-08-07 10:30:25,500 - RobotActionPlanner - INFO - Successfully processed song: my_choreography
 ...
 ==================================================
 EXECUTION STATISTICS
@@ -365,26 +372,23 @@ The system includes several utility tools for development and maintenance:
 ### Cache Management
 ```bash
 # Show cache information and statistics
-python utils/cache_utils.py info
+python tools/cache_utils.py info
 
 # Clear all cache files
-python utils/cache_utils.py clear
+python tools/cache_utils.py clear
 
 # Remove only expired cache files
-python utils/cache_utils.py cleanup
+python tools/cache_utils.py cleanup
 
 # Test cache performance
-python utils/cache_utils.py test
+python tools/cache_utils.py test
 
 # Validate cache file integrity
-python utils/cache_utils.py validate
+python tools/cache_utils.py validate
 ```
 
 ### Performance Testing
-```bash
-# Test caching performance improvement
-python utils/test_caching.py
-```
+The system includes built-in performance monitoring through cache hit/miss tracking and execution statistics.
 
 ### Cache Configuration
 Control caching behavior via `constant.py`:
@@ -404,9 +408,9 @@ The modular architecture makes it easy to add new robot types or features.
 
 ### Adding a New Robot Type
 
-1. **Create action class** in `actions/`:
+1. **Create action class** in `robot_types/`:
    ```python
-   from actions.base_action import BaseAction
+   from robot_types.base_action import BaseAction
    from typing import Dict, Optional
    import threading
    
@@ -436,9 +440,9 @@ The modular architecture makes it easy to add new robot types or features.
                self.connection.close()
    ```
 
-2. **Update robot factory** in `robots/factory.py`:
+2. **Update robot factory** in `robot_factory/factory.py`:
    ```python
-   from actions.my_robot_action import MyRobotAction
+   from robot_types.my_robot_action import MyRobotAction
    
    class RobotFactory:
        def create_all_robots(self, ...):
@@ -491,10 +495,10 @@ The modular architecture makes it easy to add new robot types or features.
 
 The system's modular design supports easy feature addition:
 
-- **New execution patterns**: Extend `ExecutionEngine`
-- **Additional media formats**: Extend `MediaManager`  
-- **Custom action compilers**: Extend `ActionCompiler`
-- **Alternative data sources**: Implement new loaders
+- **New execution patterns**: Extend `playback.engine`
+- **Additional media formats**: Extend `playback.manager`  
+- **Custom action compilers**: Extend `core.action_compiler`
+- **Alternative data sources**: Implement new loaders in `core`
 - **Monitoring/Analytics**: Add to statistics tracking
 
 ### Testing Support
@@ -503,7 +507,7 @@ The modular architecture enables comprehensive testing:
 ```python
 # Unit test example
 import unittest
-from actions.my_robot_action import MyRobotAction
+from robot_types.my_robot_action import MyRobotAction
 
 class TestMyRobotAction(unittest.TestCase):
     def setUp(self):
@@ -538,7 +542,7 @@ ERROR - Failed to initialize robots: Connection refused
 ```
 ERROR - No .mp4 files found in song folder
 ```
-**Solution**: Add `.mp4` files to the `song/` directory in the project root.
+**Solution**: Add `.mp4` files to the `songs/` directory in the project root.
 
 #### 4. **Spreadsheet Access Issues**
 ```
@@ -620,8 +624,8 @@ The system architecture follows these key principles:
 #### 1. **Separation of Concerns**
 - **Configuration**: Centralized in `config/` with type safety
 - **Robot Control**: Abstracted through `BaseAction` interface
-- **Execution**: Coordinated via `ExecutionEngine`
-- **Media**: Managed by dedicated `MediaManager`
+- **Execution**: Coordinated via `playback.engine`
+- **Media**: Managed by dedicated `playback.manager`
 - **Data Loading**: Isolated in spreadsheet and action compilers
 
 #### 2. **Inheritance & Polymorphism**
@@ -665,14 +669,15 @@ The modular design enables comprehensive testing:
 ```python
 # Example unit test structure
 tests/
-├── test_actions/
+├── test_robot_types/
 │   ├── test_base_action.py
 │   ├── test_humanoid_action.py
 │   ├── test_drone_action.py
 │   └── test_dog_action.py
-├── test_execution/
-│   └── test_engine.py
-├── test_robots/
+├── test_playback/
+│   ├── test_engine.py
+│   └── test_manager.py
+├── test_robot_factory/
 │   └── test_factory.py
 └── integration/
     └── test_full_workflow.py
@@ -700,12 +705,12 @@ tests/
 
 3. **Code formatting**:
    ```bash
-   black *.py actions/ robots/ execution/ media/ config/
+   black *.py robot_types/ robot_factory/ playback/ core/ config/ tools/
    ```
 
 4. **Linting**:
    ```bash
-   flake8 --max-line-length=100 *.py actions/ robots/ execution/ media/ config/
+   flake8 --max-line-length=100 *.py robot_types/ robot_factory/ playback/ core/ config/ tools/
    ```
 
 ## 🔄 Migration from Legacy
@@ -775,7 +780,7 @@ We welcome contributions! The modern architecture makes it much easier to:
 
 ### Getting Started with Development
 1. Read the **🔧 Extending the System** section above
-2. Examine existing implementations in `actions/`
+2. Examine existing implementations in `robot_types/`
 3. Look at the base classes and interfaces
 4. Check out the testing examples
 5. Start with a simple addition or improvement

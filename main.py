@@ -185,7 +185,10 @@ class RobotActionPlanner:
                 # Load spreadsheet data for this song
                 spreadsheet_loader = SpreadsheetLoader(song_name)
                 action_compiler = ActionCompiler(spreadsheet_loader)
-                robot_actions = action_compiler.compile_actions()
+                # Compile actions and automatically export to CSV cache
+                robot_actions = action_compiler.compile_actions(
+                    export_excel=True, song_name=song_name
+                )
 
                 # Cache the compiled data
                 self.cached_song_data[song_name] = {
