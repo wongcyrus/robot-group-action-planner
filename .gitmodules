@@ -1,0 +1,3 @@
+[submodule "StanfordQuadruped"]
+	path = StanfordQuadruped
+	url = https://github.com/wongcyrus/StanfordQuadruped
