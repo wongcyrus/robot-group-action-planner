@@ -55,65 +55,14 @@ class DogAction(BaseAction):
         self.stop_url = f"{self.base_url}/stop"
         self.clear_url = f"{self.base_url}/clear"
 
-        # Connection state
-        self.is_connected = False
-        self.last_connection_check = 0
-        self.connection_check_interval = 30  # seconds
-
-        # Available actions from robot
-        self.available_actions = set()
-
-        # Initialize connection
-        self._check_connection()
-        self.logger.info("Enhanced network dog action handler initialized")
-
-    def _check_connection(self) -> bool:
-        """Check if the robot is reachable and update connection status."""
-        current_time = time.time()
-
-        # Don't check too frequently
-        if current_time - self.last_connection_check < self.connection_check_interval:
-            return self.is_connected
-
-        self.last_connection_check = current_time
-
-        try:
-            response = requests.get(self.status_url, timeout=self.connection_timeout)
-
-            if response.status_code == 200:
-                status_data = response.json()
-                self.available_actions = set(status_data.get("available_actions", []))
-                self.is_connected = True
-                self.logger.info(
-                    f"Connected to robot at {self.robot_ip}:{self.robot_api_port}"
-                )
-                self.logger.debug(
-                    f"Available actions: {sorted(self.available_actions)}"
-                )
-                return True
-            else:
-                self.is_connected = False
-                self.logger.warning(
-                    f"Robot returned status code: {response.status_code}"
-                )
-                return False
-
-        except requests.exceptions.RequestException as e:
-            self.is_connected = False
-            self.logger.warning(f"Failed to connect to robot: {e}")
-            return False
+        self.logger.info(
+            f"Enhanced network dog action handler initialized for {self.base_url}"
+        )
 
     def _execute_single_action(
         self, action_name: str, stop_event: Optional[threading.Event] = None
     ) -> bool:
         """Execute a single dog action via network API."""
-
-        # Check connection
-        if not self._check_connection():
-            self.logger.error(
-                f"Cannot execute action '{action_name}' - robot not reachable"
-            )
-            return False
 
         action_time = self.get_action_time(action_name)
         repeat_count = self.get_repeat_count(action_name)
@@ -137,7 +86,10 @@ class DogAction(BaseAction):
                 return False
 
             try:
-                success = self._execute_network_command(robot_action, action_time)
+                # Make single API call and sleep for the duration
+                success = self._execute_network_command_and_sleep(
+                    robot_action, action_time
+                )
                 if not success:
                     return False
 
@@ -155,8 +107,10 @@ class DogAction(BaseAction):
 
         return True
 
-    def _execute_network_command(self, action_name: str, duration: float) -> bool:
-        """Execute action via network API."""
+    def _execute_network_command_and_sleep(
+        self, action_name: str, duration: float
+    ) -> bool:
+        """Execute action via network API and sleep for duration."""
         try:
             # Prepare request payload
             payload = {"action": action_name, "duration": duration, "parameters": {}}
@@ -168,17 +122,19 @@ class DogAction(BaseAction):
 
             self.logger.debug(f"Sending network command: {payload}")
 
-            # Send request
+            # Send single request
             response = requests.post(
-                self.execute_url, json=payload, timeout=self.action_timeout
+                self.execute_url, json=payload, timeout=self.connection_timeout
             )
 
             if response.status_code == 200:
                 result = response.json()
                 if result.get("success", False):
                     self.logger.info(
-                        f"Network action '{action_name}' executed successfully"
+                        f"Network action '{action_name}' sent successfully, sleeping for {duration}s"
                     )
+                    # Sleep for the action duration
+                    time.sleep(duration)
                     return True
                 else:
                     self.logger.error(
@@ -207,35 +163,59 @@ class DogAction(BaseAction):
         """Get MovementGroups-specific parameters for actions."""
         parameters = {}
 
+        # Use duration for time-based parameters
+        time_uni = min(duration, 5.0)  # Cap time_uni to reasonable maximum
+        time_acc = min(duration * 0.3, 1.0)  # Acceleration time as fraction of duration
+
         # Movement actions with velocity parameters
         if action_name.startswith("gait_uni"):
             # Gait with custom velocity
             parameters["v_x"] = 0.15  # Default forward velocity
             parameters["v_y"] = 0.0
+            parameters["time_uni"] = time_uni
+            parameters["time_acc"] = time_acc
 
         # Head movement actions
         elif action_name.startswith("head_move"):
             parameters["pitch_deg"] = 0
             parameters["yaw_deg"] = 0
+            parameters["time_uni"] = time_uni
+            parameters["time_acc"] = time_acc
 
         elif action_name == "look_up":
             parameters["pitch_deg"] = 20
+            parameters["yaw_deg"] = 0
+            parameters["time_uni"] = time_uni
+            parameters["time_acc"] = time_acc
 
         elif action_name == "look_down":
             parameters["pitch_deg"] = -20
+            parameters["yaw_deg"] = 0
+            parameters["time_uni"] = time_uni
+            parameters["time_acc"] = time_acc
 
         elif action_name == "look_left":
+            parameters["pitch_deg"] = 0
             parameters["yaw_deg"] = -30
+            parameters["time_uni"] = time_uni
+            parameters["time_acc"] = time_acc
 
         elif action_name == "look_right":
+            parameters["pitch_deg"] = 0
             parameters["yaw_deg"] = 30
+            parameters["time_uni"] = time_uni
+            parameters["time_acc"] = time_acc
 
         # Body movement actions
         elif action_name.startswith("body_row"):
             parameters["row_deg"] = 0
+            parameters["time_uni"] = time_uni
+            parameters["time_acc"] = time_acc
 
         elif action_name.startswith("height_move"):
             parameters["ht"] = 0.02  # Default height change
+            parameters["time_uni"] = time_uni
+            parameters["time_acc"] = time_acc
 
         # Leg lift actions
         elif action_name.startswith("foreleg_lift") or action_name.startswith(
@@ -243,6 +223,8 @@ class DogAction(BaseAction):
         ):
             parameters["leg_index"] = "left"
             parameters["ht"] = 0.01
+            parameters["time_uni"] = time_uni
+            parameters["time_acc"] = time_acc
 
         # Rotation actions
         elif action_name.startswith("rotate"):
@@ -271,10 +253,6 @@ class DogAction(BaseAction):
 
     def clear_action_queue(self) -> bool:
         """Clear the robot's action queue."""
-        if not self._check_connection():
-            self.logger.error("Cannot clear queue - robot not reachable")
-            return False
-
         try:
             response = requests.post(self.clear_url, timeout=self.connection_timeout)
             if response.status_code == 200:
@@ -300,10 +278,6 @@ class DogAction(BaseAction):
 
     def emergency_stop(self) -> bool:
         """Send emergency stop command to robot."""
-        if not self._check_connection():
-            self.logger.error("Cannot send emergency stop - robot not reachable")
-            return False
-
         try:
             response = requests.post(self.stop_url, timeout=self.connection_timeout)
             if response.status_code == 200:
@@ -321,9 +295,6 @@ class DogAction(BaseAction):
 
     def get_robot_status(self) -> Dict[str, Any]:
         """Get current robot status."""
-        if not self._check_connection():
-            return {"error": "Robot not reachable", "connected": False}
-
         try:
             response = requests.get(self.status_url, timeout=self.connection_timeout)
             if response.status_code == 200:
@@ -343,11 +314,10 @@ class DogAction(BaseAction):
         self.logger.info("Cleaning up network dog action handler")
 
         # Try to send stop command
-        if self.is_connected:
-            try:
-                self.emergency_stop()
-            except Exception as e:
-                self.logger.error(f"Error during cleanup stop command: {e}")
+        try:
+            self.emergency_stop()
+        except Exception as e:
+            self.logger.error(f"Error during cleanup stop command: {e}")
 
         self.logger.info("Network dog action handler cleanup complete")
 
