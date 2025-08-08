@@ -18,7 +18,7 @@ HUMANOID_IPS = [
 # DOG_IPS = ["192.168.137.42"]  # IP addresses for 1 dog robots
 
 DOG_IPS = ["192.168.137.42", "192.168.137.41"]  # IP addresses for 2 dog robots
-DOG_PORTS = [8830, 8830]  # UDP ports for dog robots (typically same port)
+# Port 8081 is now fixed in the DogAction class - no need for DOG_PORTS array
 
 # Drone configuration
 DRONE_SIMULATOR = False

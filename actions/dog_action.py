@@ -12,8 +12,8 @@ from typing import Any, Dict, Optional
 
 import requests
 
+from actions.base_action import BaseAction
 from constant import DOG_PATTERN_FALLBACK_TIMES
-from robot_types.base_action import BaseAction
 
 
 class DogAction(BaseAction):
@@ -41,7 +41,7 @@ class DogAction(BaseAction):
         self.action_timeout = action_timeout
 
         # API endpoints
-        self.base_url = f"http://{robot_ip}:8081"
+        self.base_url = f"http://{robot_ip}:{self.robot_api_port}"
         self.status_url = f"{self.base_url}/status"
         self.execute_url = f"{self.base_url}/execute"
         self.stop_url = f"{self.base_url}/stop"

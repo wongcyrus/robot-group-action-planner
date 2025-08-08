@@ -137,22 +137,15 @@ class RobotFactory:
         try:
             for i, ip in enumerate(self.config.dogs.ips):
                 dog_id = f"dog_{i+1}"
-                # Get port for this dog (use index if available, otherwise first port)
-                port = (
-                    self.config.dogs.ports[i]
-                    if i < len(self.config.dogs.ports)
-                    else self.config.dogs.ports[0]
-                )
 
                 dog = DogAction(
                     action_name_to_time=action_name_to_time,
                     action_name_to_repeat_time=action_name_to_repeat_time,
                     dog_id=dog_id,
                     robot_ip=ip,
-                    robot_port=port,
                 )
                 dogs.append(dog)
-                self.logger.info(f"Created dog robot: {dog_id} at {ip}:{port}")
+                self.logger.info(f"Created dog robot: {dog_id} at {ip}:8081")
 
         except Exception as e:
             self.logger.error(f"Error creating dogs: {e}")

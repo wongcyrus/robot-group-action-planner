@@ -31,8 +31,8 @@ class DogConfig:
     """Configuration for dog robots."""
 
     ips: List[str]
-    ports: List[int]
     enabled: bool = True
+    # Port 8081 is now fixed in DogAction class
 
 
 @dataclass
@@ -87,7 +87,6 @@ class AppConfig:
             ),
             dogs=DogConfig(
                 ips=constant.DOG_IPS,
-                ports=constant.DOG_PORTS,
                 enabled=constant.ENABLE_DOGS,
             ),
             spreadsheet=SpreadsheetConfig(
