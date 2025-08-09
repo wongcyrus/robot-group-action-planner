@@ -1,0 +1,71 @@
+{
+  "cache_key": "robot_actions_06-90_1JmjO4Yidu2pLtJxEuu4mYPX14AYmEj0przne75JBg6Y",
+  "timestamp": 1754705193.2900882,
+  "data": [
+    {
+      "Time": "4",
+      "Humanoid_1": "wave",
+      "Humanoid_2": "wave",
+      "Humanoid_3": "wave",
+      "Humanoid_4": "bow",
+      "Humanoid_5": "bow",
+      "Humanoid_6": "bow",
+      "Drone_1": "takeoff",
+      "Drone_2": "takeoff",
+      "Dog_1": "look_up",
+      "Dog_2": "look_up"
+    },
+    {
+      "Time": "4",
+      "Humanoid_1": "wave",
+      "Humanoid_2": "bow",
+      "Humanoid_3": "wave",
+      "Humanoid_4": "wave",
+      "Humanoid_5": "bow",
+      "Humanoid_6": "wave",
+      "Drone_1": "move_back",
+      "Drone_2": "move_back",
+      "Dog_1": "look_down",
+      "Dog_2": "look_down"
+    },
+    {
+      "Time": "69",
+      "Humanoid_1": "dance_seven",
+      "Humanoid_2": "dance_six",
+      "Humanoid_3": "dance_seven",
+      "Humanoid_4": "dance_seven",
+      "Humanoid_5": "dance_six",
+      "Humanoid_6": "dance_seven",
+      "Drone_1": "move_up_50\nmove_forward_50\nmove_left\nmove_right\nmove_forward\nmove_back\nmove_left\nmove_right\nmove_forward\nmove_back\nmove_left\nmove_right\nmove_forward\nmove_back\nmove_left\nmove_right\nmove_forward\nmove_back\nmove_left\nmove_right\nmove_forward\nmove_back",
+      "Drone_2": "move_up_50\nmove_forward_50\nmove_left\nmove_right\nmove_forward\nmove_back\nmove_left\nmove_right\nmove_forward\nmove_back\nmove_left\nmove_right\nmove_forward\nmove_back\nmove_left\nmove_right\nmove_forward\nmove_back\nmove_left\nmove_right\nmove_forward\nmove_back",
+      "Dog_1": "body_row\nbody_cycle\nmove_left\nmove_right\nmove_forward\nmove_back\nrotate\nmove_left\nmove_right\nmove_forward\nmove_back\nbowback\nmove_leftfront\nmove_rightfront\nmove_leftback\nmove_rightback\nlook_rightlower\nlook_leftlower\nbody_cycle\nbalance\nheight_move",
+      "Dog_2": "body_row\nbalance\nmove_left\nmove_right\nmove_forward\nmove_back\nrotate\nmove_left\nmove_right\nmove_forward\nmove_back\nbowback\nmove_leftfront\nmove_rightfront\nmove_leftback\nmove_rightback\nforeleg_lift\nbackleg_lift\nbody_cycle\nbalance\nheight_move"
+    },
+    {
+      "Time": "4.5",
+      "Humanoid_1": "wave",
+      "Humanoid_2": "back_fast",
+      "Humanoid_3": "wave",
+      "Humanoid_4": "wave",
+      "Humanoid_5": "back_fast",
+      "Humanoid_6": "wave",
+      "Drone_1": "move_forward",
+      "Drone_2": "move_left",
+      "Dog_1": "head_ellipse",
+      "Dog_2": "head_ellipse"
+    },
+    {
+      "Time": "4",
+      "Humanoid_1": "bow",
+      "Humanoid_2": "bow",
+      "Humanoid_3": "bow",
+      "Humanoid_4": "bow",
+      "Humanoid_5": "bow",
+      "Humanoid_6": "bow",
+      "Drone_1": "\nland",
+      "Drone_2": "\nland",
+      "Dog_1": "rotate",
+      "Dog_2": "rotate"
+    }
+  ]
+}

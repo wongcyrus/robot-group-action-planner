@@ -219,9 +219,15 @@ class RobotActionPlanner:
 
         # Log cache information
         cache_info = cache_manager.get_cache_info()
-        if cache_info["enabled"]:
+        if cache_info["load_enabled"] or cache_info["save_enabled"]:
+            cache_status = []
+            if cache_info["load_enabled"]:
+                cache_status.append("loading")
+            if cache_info["save_enabled"]:
+                cache_status.append("saving")
+            
             self.logger.info(
-                f"File cache: {cache_info['total_files']} files, "
+                f"File cache ({'/'.join(cache_status)}): {cache_info['total_files']} files, "
                 f"{cache_info['total_size_bytes']} bytes"
             )
         else:
@@ -360,9 +366,15 @@ class RobotActionPlanner:
 
         # Add file cache statistics
         cache_info = cache_manager.get_cache_info()
-        if cache_info["enabled"]:
+        if cache_info["load_enabled"] or cache_info["save_enabled"]:
+            cache_status = []
+            if cache_info["load_enabled"]:
+                cache_status.append("loading")
+            if cache_info["save_enabled"]:
+                cache_status.append("saving")
+            
             self.logger.info(
-                f"File cache: {cache_info['total_files']} files, "
+                f"File cache ({'/'.join(cache_status)}): {cache_info['total_files']} files, "
                 f"{cache_info['total_size_bytes']} bytes"
             )
         else:

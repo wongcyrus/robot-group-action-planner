@@ -15,6 +15,9 @@ class SpreadsheetLoader:
     # Class-level cache for action details data - shared across all instances
     _action_details_cache: Optional[List[Dict[str, str]]] = None
 
+    # Class-level cache for macro data - shared across all instances
+    _macro_cache: Optional[List[Dict[str, str]]] = None
+
     # Class-level cache for robot actions data by song name
     _robot_actions_cache: Dict[str, List[Dict[str, str]]] = {}
 
@@ -29,8 +32,10 @@ class SpreadsheetLoader:
         self.robot_actions_data = (
             self._load_robot_actions() if self.robot_actions_spreadsheet_id else []
         )
-        self.action_details_data = (
-            self._load_action_details() if self.action_details_spreadsheet_id else []
+        self.action_details_data, self.macro_data = (
+            self._load_action_details()
+            if self.action_details_spreadsheet_id
+            else ([], [])
         )
 
     def _fetch_spreadsheet_data(
@@ -120,45 +125,70 @@ class SpreadsheetLoader:
 
         return columns
 
-    def _load_action_details(self) -> List[Dict[str, str]]:
-        # Create cache key for action details
-        cache_key = f"action_details_{self.action_details_spreadsheet_id}"
+    def _load_action_details(self) -> tuple:
+        # Create cache keys
+        action_details_cache_key = (
+            f"action_details_{self.action_details_spreadsheet_id}"
+        )
+        macro_cache_key = f"macro_{self.action_details_spreadsheet_id}"
 
         # Try to get from file cache first
-        cached_data = cache_manager.get_cache(cache_key)
-        if cached_data is not None:
-            print("Using file cached action details data.")
+        cached_action_details = cache_manager.get_cache(action_details_cache_key)
+        cached_macro = cache_manager.get_cache(macro_cache_key)
+
+        if cached_action_details is not None and cached_macro is not None:
+            print("Using file cached action details and macro data.")
             # Also update in-memory cache for consistency
-            SpreadsheetLoader._action_details_cache = cached_data
-            return cached_data
+            SpreadsheetLoader._action_details_cache = cached_action_details
+            SpreadsheetLoader._macro_cache = cached_macro
+            return cached_action_details, cached_macro
 
         # Check if we have in-memory cached data
-        if SpreadsheetLoader._action_details_cache is not None:
-            print("Using in-memory cached action details data.")
-            return SpreadsheetLoader._action_details_cache
+        if (
+            SpreadsheetLoader._action_details_cache is not None
+            and SpreadsheetLoader._macro_cache is not None
+        ):
+            print("Using in-memory cached action details and macro data.")
+            return (
+                SpreadsheetLoader._action_details_cache,
+                SpreadsheetLoader._macro_cache,
+            )
 
-        # Fetch data if not cached
+        # Fetch action details data if not cached
         f = self._fetch_spreadsheet_data(self.action_details_spreadsheet_id, "Robot")
         if not f:
             print("Failed to fetch action details spreadsheet data.")
-            return []
+            return [], []
         columns = ["Code", "Name", "Time", "Repeat_Time", "Remark", "Link"]
-        data = self._load_csv_data(f, columns)
+        action_details_data = self._load_csv_data(f, columns)
+
+        # Fetch macro data if not cached
+        f = self._fetch_spreadsheet_data(self.action_details_spreadsheet_id, "Macro")
+        if not f:
+            print("Failed to fetch macro spreadsheet data.")
+            return action_details_data, []
+        columns = ["Alias", "Actions"]
+        macro_data = self._load_csv_data(f, columns)
 
         # Cache the data both in-memory and file
-        SpreadsheetLoader._action_details_cache = data
-        cache_manager.set_cache(cache_key, data)
-        print("Action details data cached (memory + file).")
-        return data
+        SpreadsheetLoader._action_details_cache = action_details_data
+        SpreadsheetLoader._macro_cache = macro_data
+        cache_manager.set_cache(action_details_cache_key, action_details_data)
+        cache_manager.set_cache(macro_cache_key, macro_data)
+        print("Action details and macro data cached (memory + file).")
+        return action_details_data, macro_data
 
     @classmethod
     def clear_action_details_cache(cls) -> None:
-        """Clear the cached action details data."""
+        """Clear the cached action details and macro data."""
         cls._action_details_cache = None
+        cls._macro_cache = None
         # Clear file cache
-        cache_key = f"action_details_{ACTION_DETAILS_SPREADSHEET_ID}"
-        cache_manager.clear_cache(cache_key)
-        print("Action details cache cleared (memory + file).")
+        action_details_cache_key = f"action_details_{ACTION_DETAILS_SPREADSHEET_ID}"
+        macro_cache_key = f"macro_{ACTION_DETAILS_SPREADSHEET_ID}"
+        cache_manager.clear_cache(action_details_cache_key)
+        cache_manager.clear_cache(macro_cache_key)
+        print("Action details and macro cache cleared (memory + file).")
 
     @classmethod
     def clear_robot_actions_cache(cls, song_name: Optional[str] = None) -> None:
@@ -192,6 +222,21 @@ class SpreadsheetLoader:
 
     def get_action_details(self):
         return self.action_details_data
+
+    def get_macro_data(self):
+        return self.macro_data
+
+    def get_macro_aliases(self) -> Dict[str, str]:
+        """Get a mapping of macro aliases to their action sequences."""
+        if not self.macro_data:
+            return {}
+        macro_aliases = {}
+        for macro in self.macro_data:
+            alias = macro.get("Alias")
+            actions = macro.get("Actions")
+            if alias and actions:
+                macro_aliases[alias] = actions
+        return macro_aliases
 
     def get_action_name_to_time(self) -> Dict[str, float]:
         """Get a mapping of action names to their time values as floats."""

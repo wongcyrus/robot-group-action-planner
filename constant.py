@@ -52,7 +52,8 @@ DOG_COMMAND_TIMEOUT = 3  # Timeout for individual dog commands (seconds)
 DOG_MAX_RETRIES = 0  # Maximum number of retries for dog commands (0 = no retries)
 
 # Cache configuration
-USE_FILE_CACHE = False  # Set to False to disable persistent file caching
+USE_FILE_CACHE = False  # Set to False to disable loading from persistent file cache
+ALWAYS_SAVE_CACHE = True  # Set to True to always save cache files for debugging (even when USE_FILE_CACHE is False)
 CACHE_DIRECTORY = "data"  # Directory to store cache files
 CACHE_EXPIRY_HOURS = 24  # Cache expiry time in hours (0 = never expire)
 
