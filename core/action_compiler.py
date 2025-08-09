@@ -154,6 +154,51 @@ class ActionCompiler:
 
         return 0.0  # Not found
 
+    def _expand_macro_aliases(self, value: str) -> str:
+        """
+        Expand macro aliases in the action value with their corresponding action sequences.
+
+        Args:
+            value: The action value that may contain macro aliases
+
+        Returns:
+            The expanded action value with aliases replaced by their action sequences
+        """
+        if not value:
+            return value
+
+        # Get macro aliases mapping
+        macro_aliases = self.spreadsheet_loader.get_macro_aliases()
+        if not macro_aliases:
+            return value
+
+        # Split the value into lines to process each action
+        lines = value.splitlines()
+        expanded_lines = []
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Check if this line is a macro alias
+            if line in macro_aliases:
+                # Replace with the macro's action sequence
+                macro_actions = macro_aliases[line]
+                # Split macro actions by newlines and add each as separate lines
+                macro_lines = [
+                    ml.strip() for ml in macro_actions.splitlines() if ml.strip()
+                ]
+                expanded_lines.extend(macro_lines)
+                self.logger.debug(
+                    f"Expanded macro alias '{line}' to {len(macro_lines)} actions"
+                )
+            else:
+                # Keep the original line
+                expanded_lines.append(line)
+
+        return "\n".join(expanded_lines)
+
     def compile_actions(
         self, export_excel: bool = False, csv_path: str = None, song_name: str = None
     ) -> List[Dict[str, Any]]:
@@ -177,10 +222,18 @@ class ActionCompiler:
         for action in robot_actions:
             for key in self._get_robot_keys(action):
                 value = action[key]
-                # Only render as Jinja2 template if there are template markers and value is not empty
+
+                # First expand any macro aliases to their action sequences
+                if value:
+                    value = self._expand_macro_aliases(value)
+
+                # Then render as Jinja2 template if there are template markers
                 if value and ("{{" in value or "}}" in value):
                     rtemplate = Environment(loader=BaseLoader).from_string(value)
-                    action[key] = rtemplate.render({})
+                    value = rtemplate.render({})
+
+                # Update the action with the processed value
+                action[key] = value
 
         self.logger.info(f"Compiled {len(robot_actions)} action sequences")
         self.logger.debug(f"Action details loaded: {list(action_name_to_time.keys())}")

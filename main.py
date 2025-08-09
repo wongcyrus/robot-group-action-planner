@@ -225,7 +225,7 @@ class RobotActionPlanner:
                 cache_status.append("loading")
             if cache_info["save_enabled"]:
                 cache_status.append("saving")
-            
+
             self.logger.info(
                 f"File cache ({'/'.join(cache_status)}): {cache_info['total_files']} files, "
                 f"{cache_info['total_size_bytes']} bytes"
@@ -372,7 +372,7 @@ class RobotActionPlanner:
                 cache_status.append("loading")
             if cache_info["save_enabled"]:
                 cache_status.append("saving")
-            
+
             self.logger.info(
                 f"File cache ({'/'.join(cache_status)}): {cache_info['total_files']} files, "
                 f"{cache_info['total_size_bytes']} bytes"
