@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from constant import DOG_PATTERN_FALLBACK_TIMES
+from action_times import DOG_PATTERN_FALLBACK_TIMES
 from robot_types.base_action import BaseAction
 
 

@@ -6,12 +6,8 @@ import threading
 import time
 from typing import Dict, Optional
 
-from constant import (
-    DRONE_COMMAND_TIMEOUT,
-    DRONE_CONNECTION_TIMEOUT,
-    DRONE_PATTERN_FALLBACK_TIMES,
-    DRONE_TAKEOFF_TIMEOUT,
-)
+from action_times import DRONE_PATTERN_FALLBACK_TIMES
+from constant import DRONE_COMMAND_TIMEOUT, DRONE_TAKEOFF_TIMEOUT
 from robot_types.base_action import BaseAction
 
 

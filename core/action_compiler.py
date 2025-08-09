@@ -7,7 +7,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from constant import (
+from action_times import (
     DOG_DEFAULT_ACTION_TIMES,
     DOG_PATTERN_FALLBACK_TIMES,
     DRONE_DEFAULT_ACTION_TIMES,
