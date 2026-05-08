@@ -3,6 +3,7 @@ Robot Action Planner - Main Entry Point
 Refactored version with improved architecture and error handling.
 """
 
+import argparse
 import logging
 import os
 import sys
@@ -20,14 +21,16 @@ from tools import reset_logs, setup_logging
 class RobotActionPlanner:
     """Main orchestrator for robot action planning and execution."""
 
-    def __init__(self, config: AppConfig):
+    def __init__(self, config: AppConfig, target_song: str = None):
         """
         Initialize the robot action planner.
 
         Args:
             config: Application configuration
+            target_song: Optional specific song name to process
         """
         self.config = config
+        self.target_song = target_song
         self.logger = logging.getLogger("RobotActionPlanner")
         self.stop_event = threading.Event()
 
@@ -69,6 +72,25 @@ class RobotActionPlanner:
             if not song_files:
                 self.logger.error(f"No .mp4 files found in {song_folder}")
                 return
+
+            # Filter by target song if provided
+            if self.target_song and self.target_song.lower() != "all":
+                filtered_files = []
+                target_lower = self.target_song.lower()
+                
+                for f in song_files:
+                    name_without_ext = os.path.splitext(f)[0]
+                    if f.lower() == target_lower or name_without_ext.lower() == target_lower:
+                        filtered_files.append(f)
+                
+                if not filtered_files:
+                    self.logger.error(f"Target song '{self.target_song}' not found in {song_folder}")
+                    return
+                
+                song_files = filtered_files
+                self.logger.info(f"Targeting specific song(s): {', '.join(song_files)}")
+            elif self.target_song and self.target_song.lower() == "all":
+                self.logger.info("Targeting all songs explicitly")
 
             self.logger.info(f"Found {len(song_files)} song files to process")
 
@@ -395,6 +417,10 @@ class RobotActionPlanner:
 
 def main() -> None:
     """Main entry point for the application."""
+    parser = argparse.ArgumentParser(description="Robot Action Planner")
+    parser.add_argument("song", nargs="?", help="Specific song name to process")
+    args = parser.parse_args()
+
     try:
         # Reset logs if enabled (before setting up logging)
         reset_logs()
@@ -411,7 +437,7 @@ def main() -> None:
         config = AppConfig.from_constants()
 
         # Create and run the application
-        planner = RobotActionPlanner(config)
+        planner = RobotActionPlanner(config, target_song=args.song)
         planner.run()
 
         logger.info("Robot Action Planner completed successfully")
