@@ -35,8 +35,8 @@ SIMULATOR_BASE_URL = "https://iyfjqmah49.us-east-1.awsapprunner.com"
 SESSION_KEY = "hkiitshow"
 SONG_BASE_URL = "https://cdkstack-robotsimulatorconstructrobotsimulatorwebs-fxuvfxmglhc4.s3.us-east-1.amazonaws.com"
 
-ENABLE_DRONES = True  # Set to False to disable drone initialization
-ENABLE_DOGS = True  # Set to False to disable dog initialization
+ENABLE_DRONES = False  # Set to False to disable drone initialization
+ENABLE_DOGS = False  # Set to False to disable dog initialization
 ENABLE_HUMANOIDS = True  # Set to False to disable humanoid robot initialization
 
 # Media playback configuration

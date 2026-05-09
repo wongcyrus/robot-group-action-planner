@@ -19,8 +19,7 @@ if os.environ.get("ROBOT_DANCE_AUTHORIZED") != "true":
 
 try:
     from config.settings import AppConfig
-    from core.action_compiler import ActionCompiler
-    from core.spreadsheet_loader import SpreadsheetLoader
+    from main import RobotActionPlanner
     from tools import setup_logging
 except ImportError as e:
     print(f"Error: Could not import core modules from project root. {e}")
@@ -39,8 +38,14 @@ def execute_dance_show(song_name: str):
     # This script owns the execution lifecycle for this specific skill.
     print(f"Executing robot dance choreography for {song_name}...")
     
-    # Logic to interface with robot_factory and execution_engine
-    # ...
+    # Load configuration
+    config = AppConfig.from_constants()
+    
+    # Create and run the planner
+    planner = RobotActionPlanner(config, target_song=song_name)
+    planner.run()
+    
+    logger.info(f"Robot dance show for {song_name} completed.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Robot Dance Show Internal Runner")

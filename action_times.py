@@ -48,30 +48,30 @@ DRONE_DEFAULT_ACTION_TIMES = {
     "takeoff": 3.0,
     "land": 3.0,
     # Movement actions (with common parameter variations)
-    "move_up": 3.0,
-    "move_up_20": 3.0,
-    "move_up_50": 3.0,
-    "move_up_100": 3.0,
-    "move_down": 3.0,
-    "move_down_20": 3.0,
-    "move_down_50": 3.0,
-    "move_down_100": 3.0,
-    "move_left": 3.0,
-    "move_left_20": 3.0,
-    "move_left_50": 3.0,
-    "move_left_100": 3.0,
-    "move_right": 3.0,
-    "move_right_20": 3.0,
-    "move_right_50": 3.0,
-    "move_right_100": 3.0,
-    "move_forward": 3.0,
-    "move_forward_20": 3.0,
-    "move_forward_50": 3.0,
-    "move_forward_100": 3.0,
-    "move_back": 3.0,
-    "move_back_20": 3.0,
-    "move_back_50": 3.0,
-    "move_back_100": 3.0,
+    "move_up": 2.0,
+    "move_up_20": 2.0,
+    "move_up_50": 2.0,
+    "move_up_100": 2.0,
+    "move_down": 2.0,
+    "move_down_20": 2.0,
+    "move_down_50": 2.0,
+    "move_down_100": 2.0,
+    "move_left": 2.0,
+    "move_left_20": 2.0,
+    "move_left_50": 2.0,
+    "move_left_100": 2.0,
+    "move_right": 2.0,
+    "move_right_20": 2.0,
+    "move_right_50": 2.0,
+    "move_right_100": 2.0,
+    "move_forward": 2.0,
+    "move_forward_20": 2.0,
+    "move_forward_50": 2.0,
+    "move_forward_100": 2.0,
+    "move_back": 2.0,
+    "move_back_20": 2.0,
+    "move_back_50": 2.0,
+    "move_back_100": 2.0,
     # Rotation actions
     "rotate_cw": 3.0,
     "rotate_cw_90": 3.0,
@@ -100,7 +100,7 @@ DRONE_PATTERN_FALLBACK_TIMES = {
     "curve": 7.0,  # Complex curve movements
     "go": 3.0,  # XYZ movement actions
     "jump": 5.0,  # Jump actions
-    "move": 3.0,  # Base movement pattern
+    "move": 2.0,  # Base movement pattern
     "rotate": 3.0,  # Base rotation pattern
     "flip": 4.0,  # Base flip pattern
 }
